@@ -1307,6 +1307,8 @@ long audio_aio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		audio->wflush = 1;
 		/* Flush DSP */
 		rc = audio_aio_flush(audio);
+		/* Flush input / Output buffer in software*/
+		audio_aio_ioport_reset(audio);
 		if (rc < 0) {
 			pr_err("%s[%p]:AUDIO_FLUSH interrupted\n",
 				__func__, audio);
