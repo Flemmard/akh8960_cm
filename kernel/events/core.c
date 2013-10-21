@@ -3026,6 +3026,15 @@ static void put_event(struct perf_event *event)
 
 	if (!atomic_long_dec_and_test(&event->refcount))
 		return;
+	/*
+	 * Event can be in state OFF because of a constraint check.
+	 * Change to ACTIVE so that it gets cleaned up correctly.
+	 */
+	if ((event->state == PERF_EVENT_STATE_OFF) &&
+	    event->attr.constraint_duplicate)
+		event->state = PERF_EVENT_STATE_ACTIVE;
+
+	file->private_data = NULL;
 
 	rcu_read_lock();
 	owner = ACCESS_ONCE(event->owner);
