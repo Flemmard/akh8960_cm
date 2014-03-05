@@ -30,21 +30,6 @@
 #include <mach/board-ext-htc.h>
 #endif
 
-enum msm_camera_csi_data_format {
-	CSI_8BIT,
-	CSI_10BIT,
-	CSI_12BIT,
-};
-
-struct msm_camera_csi_params {
-	enum msm_camera_csi_data_format data_format;
-	uint8_t lane_cnt;
-	uint8_t lane_assign;
-	uint8_t settle_cnt;
-	uint8_t dpcm_scheme;
-	uint8_t mipi_driving_strength;/*from 0-3*/
-	uint8_t hs_impedence;
-};
 
 struct msm_camera_io_ext {
 	uint32_t mdcphy;
@@ -80,18 +65,8 @@ struct msm_camera_device_platform_data {
 	struct msm_camera_io_ext ioext;
 	struct msm_camera_io_clk ioclk;
 	uint8_t csid_core;
-#ifdef CONFIG_MACH_HTC
-	uint8_t is_csiphy;
-	uint8_t is_csic;
-	uint8_t is_csid;
-	uint8_t is_ispif;
-#endif
 	uint8_t is_vpe;
 	struct msm_bus_scale_pdata *cam_bus_scale_table;
-#ifdef CONFIG_MACH_HTC
-	int (*camera_csi_on) (void);
-	int (*camera_csi_off)(void);
-#endif
 };
 
 #ifdef CONFIG_SENSORS_MT9T013
@@ -157,9 +132,6 @@ struct msm_camera_sensor_flash_led {
 
 struct msm_camera_sensor_flash_src {
 	int flash_sr_type;
-#ifdef CONFIG_MACH_HTC
-	int (*camera_flash)(int level);
-#endif
 
 	union {
 		struct msm_camera_sensor_flash_pmic pmic_src;
@@ -226,10 +198,6 @@ struct msm_camera_gpio_conf {
 	uint8_t camera_off_table_size;
 	uint32_t *camera_on_table;
 	uint8_t camera_on_table_size;
-#ifdef CONFIG_MACH_HTC
-	uint16_t *cam_gpio_tbl;
-	uint8_t cam_gpio_tbl_size;
-#endif
 };
 
 enum msm_camera_i2c_mux_mode {
@@ -260,18 +228,6 @@ struct msm_camera_sensor_platform_info {
 	struct msm_camera_gpio_conf *gpio_conf;
 	struct msm_camera_i2c_conf *i2c_conf;
 	struct msm_camera_csi_lane_params *csi_lane_params;
-#if defined(CONFIG_MACH_HTC) && defined(CONFIG_MSM_CAMERA)
-	int sensor_reset_enable;
-	int sensor_pwd;
-	int vcm_pwd;
-	int vcm_enable;
-	int privacy_light;
-	enum msm_camera_pixel_order_default pixel_order_default;
-	enum sensor_flip_mirror_info mirror_flip;
-	void *privacy_light_info;
-	enum sensor_mount_angle sensor_mount_angle;
-	bool ews_enable;
-#endif
 };
 
 enum msm_camera_actuator_name {
@@ -292,27 +248,14 @@ struct msm_actuator_info {
 	int bus_id;
 	int vcm_pwd;
 	int vcm_enable;
-#ifdef CONFIG_MACH_HTC
-	int use_rawchip_af;
-	int otp_diviation;
-	void (*vcm_wa_vreg_on) (void);
-	void (*vcm_wa_vreg_off) (void);
-	void (*oisbinder_i2c_add_driver) (void* i2c_client);
-	void (*oisbinder_open_init) (void);
-	void (*oisbinder_power_down) (void);
-	int32_t (*oisbinder_act_set_ois_mode) (int ois_mode);
-	int32_t (*oisbinder_mappingTbl_i2c_write) (int startup_mode, void * sensor_actuator_info);
-#endif
 };
 
 struct msm_eeprom_info {
 	struct i2c_board_info const *board_info;
 	int bus_id;
-#ifndef CONFIG_MACH_HTC
 	int eeprom_reg_addr;
 	int eeprom_read_length;
 	int eeprom_i2c_slave_addr;
-#endif
 };
 
 struct msm_camera_sensor_info {
@@ -337,34 +280,6 @@ struct msm_camera_sensor_info {
 	struct msm_actuator_info *actuator_info;
 	int pmic_gpio_enable;
 	struct msm_eeprom_info *eeprom_info;
-#if defined(CONFIG_MACH_HTC) && defined(CONFIG_MSM_CAMERA)
-	struct msm_camera_csi_params csi_params;
-	uint16_t num_actuator_info_table;
-	struct msm_actuator_info **actuator_info_table;
-	struct msm_camera_gpio_conf *gpio_conf;
-	int (*camera_power_on)(void);
-	int (*camera_power_off)(void);
-	void (*camera_yushanii_probed)(enum htc_camera_image_type_board);
-	enum htc_camera_image_type_board htc_image;
-	int use_rawchip;
-	int hdr_mode;
-	int video_hdr_capability;
-	void (*camera_clk_switch)(void);
-	int power_down_disable;
-	int full_size_preview;
-	int cam_select_pin;
-	int mirror_mode;
-	int (*camera_pm8058_power)(int);
-	struct camera_flash_cfg* flash_cfg;
-	int gpio_set_value_force;
-	int dev_node;
-	int camera_platform;
-	uint8_t led_high_enabled;
-	uint32_t kpi_sensor_start;
-	uint32_t kpi_sensor_end;
-	uint8_t (*preview_skip_frame)(void);
-	int sensor_cut;
-#endif
 };
 
 struct msm_camera_board_info {

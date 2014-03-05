@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,7 +16,7 @@
 #define _VIDEOBUF2_PMEM_CONTIG_H
 
 #include <media/videobuf2-core.h>
-#include <mach/msm_subsystem_map.h>
+#include <mach/iommu_domains.h>
 #include <linux/msm_ion.h>
 
 struct videobuf2_mapping {
@@ -46,12 +46,12 @@ struct videobuf2_contig_pmem {
 	int phyaddr;
 	unsigned long size;
 	int is_userptr;
-	
+	/* Offset of the plane inside the buffer */
 	struct videobuf2_msm_offset offset;
 	enum videobuf2_buffer_type buffer_type;
 	int path;
 	struct file *file;
-	
+	/* Offset of the buffer */
 	uint32_t addr_offset;
 	int dirty;
 	unsigned int count;
@@ -59,7 +59,6 @@ struct videobuf2_contig_pmem {
 	unsigned long mapped_phyaddr;
 	struct ion_handle *ion_handle;
 	struct ion_client *client;
-	void *arm_vaddr;
 };
 void videobuf2_queue_pmem_contig_init(struct vb2_queue *q,
 					enum v4l2_buf_type type,
@@ -73,10 +72,11 @@ int videobuf2_pmem_contig_user_get(struct videobuf2_contig_pmem *mem,
 					struct videobuf2_msm_offset *offset,
 					enum videobuf2_buffer_type,
 					uint32_t addr_offset, int path,
-					struct ion_client *client);
+					struct ion_client *client,
+					int domain_num);
 void videobuf2_pmem_contig_user_put(struct videobuf2_contig_pmem *mem,
-					struct ion_client *client);
+				struct ion_client *client, int domain_num);
 unsigned long videobuf2_to_pmem_contig(struct vb2_buffer *buf,
 					unsigned int plane_no);
 
-#endif 
+#endif /* _VIDEOBUF2_PMEM_CONTIG_H */

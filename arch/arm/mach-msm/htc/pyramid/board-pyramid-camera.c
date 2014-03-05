@@ -43,7 +43,6 @@ static struct platform_device msm_camera_server = {
 static int pyramid_config_camera_on_gpios(void);
 static void pyramid_config_camera_off_gpios(void);
 
-#ifdef CONFIG_MSM_CAMERA
 static struct msm_bus_vectors cam_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_VFE,
@@ -247,7 +246,6 @@ struct msm_camera_device_platform_data msm_camera_csi_device_data[] = {
 	.ioclk.mclk_clk_rate = 24000000,
 	.ioclk.vfe_clk_rate  = 228570000,
 	.csid_core = 0,
-	.is_csic = 1,
 	.is_vpe = 1,
 	.cam_bus_scale_table = &cam_bus_client_pdata,
 	},
@@ -260,7 +258,6 @@ struct msm_camera_device_platform_data msm_camera_csi_device_data[] = {
 	.ioclk.mclk_clk_rate = 24000000,
 	.ioclk.vfe_clk_rate  = 228570000,
 	.csid_core = 1,
-	.is_csic = 1,
 	.is_vpe = 1,
 	.cam_bus_scale_table = &cam_bus_client_pdata,
 	},
@@ -279,10 +276,10 @@ static int flashlight_control(int mode)
 
 static struct msm_camera_sensor_flash_src msm_flash_src = {
 	.flash_sr_type = MSM_CAMERA_FLASH_SRC_CURRENT_DRIVER,
-	.camera_flash = flashlight_control,
 };
+#endif
 
-
+#if defined(CONFIG_S5K3H1GX) || defined(CONFIG_MT9V113)
 static struct regulator *pyramid_reg_8058_l9 = NULL;
 static struct regulator *pyramid_reg_8058_l10 = NULL;
 static struct regulator *pyramid_reg_8058_l12 = NULL;
@@ -403,7 +400,9 @@ static void pyramid_config_camera_off_gpios(void)
 	config_gpio_table(camera_off_gpio_table,
 		ARRAY_SIZE(camera_off_gpio_table));
 }
+#endif
 
+#ifdef CONFIG_S5K3H1GX
 static int pyramid_s5k3h1gx_vreg_on(void)
 {
 	static int first_run = 1;
@@ -565,6 +564,7 @@ static int pyramid_s5k3h1gx_vreg_off(void)
 init_fail:
 		return rc;
 }
+#endif
 
 #ifdef CONFIG_S5K3H1GX_ACT
 static struct i2c_board_info s5k3h1gx_actuator_i2c_info = {
@@ -578,16 +578,12 @@ static struct msm_actuator_info s5k3h1gx_actuator_info = {
 };
 #endif
 
+#ifdef CONFIG_S5K3H1GX
 static struct msm_camera_sensor_platform_info sensor_s5k3h1gx_board_info = {
 	.mount_angle = 90,
-	.mirror_flip = CAMERA_SENSOR_MIRROR_FLIP,
-	.sensor_reset_enable = 1,
+        //	.mirror_flip = CAMERA_SENSOR_MIRROR_FLIP,
+        //	.sensor_reset_enable = 1,
 	.sensor_reset	= PYRAMID_CAM1_RSTz,
-};
-
-static struct camera_flash_cfg msm_camera_sensor_s5k3h1gx_flash_cfg = {
-	.low_temp_limit		= 5,
-	.low_cap_limit		= 30,
 };
 
 static struct msm_camera_sensor_flash_data flash_s5k3h1gx = {
@@ -599,8 +595,6 @@ static struct msm_camera_sensor_flash_data flash_s5k3h1gx = {
 
 static struct msm_camera_sensor_info msm_camera_sensor_s5k3h1gx_data = {
 	.sensor_name	= "s5k3h1gx",
-	.camera_power_on = pyramid_s5k3h1gx_vreg_on,
-	.camera_power_off = pyramid_s5k3h1gx_vreg_off,
 	.pdata	= &msm_camera_csi_device_data[0],
 	.flash_data	= &flash_s5k3h1gx,
 	.sensor_platform_info = &sensor_s5k3h1gx_board_info,
@@ -609,8 +603,6 @@ static struct msm_camera_sensor_info msm_camera_sensor_s5k3h1gx_data = {
 #ifdef CONFIG_S5K3H1GX_ACT
 	.actuator_info = &s5k3h1gx_actuator_info,
 #endif
-	.use_rawchip = 0,
-	.flash_cfg = &msm_camera_sensor_s5k3h1gx_flash_cfg,
 };
 
 struct platform_device pyramid_camera_sensor_s5k3h1gx = {
@@ -729,7 +721,7 @@ init_fail:
 
 static struct msm_camera_sensor_platform_info sensor_mt9v113_board_info = {
 	.mount_angle = 270,
-	.mirror_flip = CAMERA_SENSOR_NONE,
+        //	.mirror_flip = CAMERA_SENSOR_NONE,
 	.sensor_reset_enable = 1,
 	.sensor_reset = PYRAMID_CAM2_RSTz,
 };

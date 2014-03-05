@@ -106,6 +106,7 @@ typedef struct {
 } mhl_driving_params;
 #endif
 
+#if 0
 #ifdef CONFIG_MSM_CAMERA
 struct camera_led_info {
 	uint16_t enable;
@@ -206,5 +207,6 @@ enum cam_vcm_onoff_type {
 	STATUS_ON,
 };
 #endif /* CONFIG_MSM_CAMERA */
+#endif
 
 #endif /* __ASM_ARCH_MSM_BOARD_EXT_HTC_H */

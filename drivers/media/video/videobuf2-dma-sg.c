@@ -48,12 +48,10 @@ static void *vb2_dma_sg_alloc(void *alloc_ctx, unsigned long size)
 	buf->sg_desc.size = size;
 	buf->sg_desc.num_pages = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
-	buf->sg_desc.sglist = vmalloc(buf->sg_desc.num_pages *
+	buf->sg_desc.sglist = vzalloc(buf->sg_desc.num_pages *
 				      sizeof(*buf->sg_desc.sglist));
 	if (!buf->sg_desc.sglist)
 		goto fail_sglist_alloc;
-	memset(buf->sg_desc.sglist, 0, buf->sg_desc.num_pages *
-	       sizeof(*buf->sg_desc.sglist));
 	sg_init_table(buf->sg_desc.sglist, buf->sg_desc.num_pages);
 
 	buf->pages = kzalloc(buf->sg_desc.num_pages * sizeof(struct page *),
@@ -77,12 +75,6 @@ static void *vb2_dma_sg_alloc(void *alloc_ctx, unsigned long size)
 
 	printk(KERN_DEBUG "%s: Allocated buffer of %d pages\n",
 		__func__, buf->sg_desc.num_pages);
-
-	if (!buf->vaddr)
-		buf->vaddr = vm_map_ram(buf->pages,
-					buf->sg_desc.num_pages,
-					-1,
-					PAGE_KERNEL);
 	return buf;
 
 fail_pages_alloc:
@@ -136,13 +128,11 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	last  = ((vaddr + size - 1) & PAGE_MASK) >> PAGE_SHIFT;
 	buf->sg_desc.num_pages = last - first + 1;
 
-	buf->sg_desc.sglist = vmalloc(
+	buf->sg_desc.sglist = vzalloc(
 		buf->sg_desc.num_pages * sizeof(*buf->sg_desc.sglist));
 	if (!buf->sg_desc.sglist)
 		goto userptr_fail_sglist_alloc;
 
-	memset(buf->sg_desc.sglist, 0,
-		buf->sg_desc.num_pages * sizeof(*buf->sg_desc.sglist));
 	sg_init_table(buf->sg_desc.sglist, buf->sg_desc.num_pages);
 
 	buf->pages = kzalloc(buf->sg_desc.num_pages * sizeof(struct page *),
@@ -150,15 +140,14 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	if (!buf->pages)
 		goto userptr_fail_pages_array_alloc;
 
-	down_read(&current->mm->mmap_sem);
 	num_pages_from_user = get_user_pages(current, current->mm,
 					     vaddr & PAGE_MASK,
 					     buf->sg_desc.num_pages,
 					     write,
-					     1, 
+					     1, /* force */
 					     buf->pages,
 					     NULL);
-	up_read(&current->mm->mmap_sem);
+
 	if (num_pages_from_user != buf->sg_desc.num_pages)
 		goto userptr_fail_get_user_pages;
 
@@ -187,6 +176,10 @@ userptr_fail_sglist_alloc:
 	return NULL;
 }
 
+/*
+ * @put_userptr: inform the allocator that a USERPTR buffer will no longer
+ *		 be used
+ */
 static void vb2_dma_sg_put_userptr(void *buf_priv)
 {
 	struct vb2_dma_sg_buf *buf = buf_priv;
@@ -218,7 +211,7 @@ static void *vb2_dma_sg_vaddr(void *buf_priv)
 					-1,
 					PAGE_KERNEL);
 
-	
+	/* add offset in case userptr is not page-aligned */
 	return buf->vaddr + buf->offset;
 }
 
@@ -255,6 +248,9 @@ static int vb2_dma_sg_mmap(void *buf_priv, struct vm_area_struct *vma)
 	} while (usize > 0);
 
 
+	/*
+	 * Use common vm_area operations to track buffer refcount.
+	 */
 	vma->vm_private_data	= &buf->handler;
 	vma->vm_ops		= &vb2_common_vm_ops;
 
