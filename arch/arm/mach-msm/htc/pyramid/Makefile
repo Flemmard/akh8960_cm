@@ -9,7 +9,7 @@ obj-$(CONFIG_MACH_PYRAMID) += board-pyramid-pmic.o
 obj-$(CONFIG_MACH_PYRAMID) += board-pyramid-audio.o
 obj-$(CONFIG_MACH_PYRAMID) += board-pyramid-rfkill.o
 ifeq ($(CONFIG_MSM_CAMERA),y)
-obj-$(CONFIG_MACH_PYRAMID) += board-pyramid-camera-tmp.o
+obj-$(CONFIG_MACH_PYRAMID) += board-pyramid-camera.o
 endif
 obj-$(CONFIG_MACH_PYRAMID) += display/
 
