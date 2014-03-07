@@ -561,6 +561,7 @@ static int msm_axi_config(struct v4l2_subdev *sd,
 	case CMD_AXI_CFG_PRIM_ALL_CHNLS|CMD_AXI_CFG_SEC:
 	case CMD_AXI_START:
 	case CMD_AXI_STOP:
+        case CMD_AXI_RESET:
 	case CMD_AXI_CFG_TERT1:
 	case CMD_AXI_CFG_TERT2:
 	case CMD_AXI_CFG_TERT3:
