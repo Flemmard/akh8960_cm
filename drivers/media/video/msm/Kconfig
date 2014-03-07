@@ -167,6 +167,23 @@ config DW9712_ACT
 	  dw9721 lens actuator driver for S5K4E1.
 	  Say Y here if this is msm7627A variant platform.
 
+config MT9V113
+	bool "Sensor mt9v113 (VGA YUV)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Support for MT9V113 Micron sensor driver.
+	  It is a Bayer 0.3MP sensor it supports two mipi lanes.
+
+config S5K3H1GX
+	bool "Sensor s5k3h1gx (Samsung 8M)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Support for S5K3H1GX samsung sensor driver.
+	  It is a Bayer 8MP sensor with auto focus and it supports
+	  two mipi lanes.
+
 config MSM_CAMERA_FLASH_SC628A
 	bool "Qualcomm MSM camera sc628a flash support"
 	depends on MSM_CAMERA
