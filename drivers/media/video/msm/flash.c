@@ -287,6 +287,16 @@ int msm_camera_flash_led(
 	return rc;
 }
 
+int msm_camera_flash_callback(
+	struct msm_camera_sensor_flash_callback *flash_src,
+	unsigned led_state)
+{
+	if (!flash_src->callback)
+          return 0;
+
+        return flash_src->callback(led_state);
+}
+
 static void flash_wq_function(struct work_struct *work)
 {
 	if (tps61310_client) {
@@ -632,6 +642,11 @@ int32_t msm_camera_flash_set_led_state(
 				led_state);
 		break;
 
+        case MSM_CAMERA_FLASH_SRC_CALLBACK:
+                rc = msm_camera_flash_callback(
+				&fdata->flash_src->_fsrc.callback_driver_src,
+				led_state);
+		break;
 	default:
 		rc = -ENODEV;
 		break;

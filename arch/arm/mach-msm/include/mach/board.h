@@ -88,6 +88,7 @@ struct msm_camera_legacy_device_platform_data {
 #define MSM_CAMERA_FLASH_SRC_EXT     (0x00000001<<3)
 #define MSM_CAMERA_FLASH_SRC_LED (0x00000001<<3)
 #define MSM_CAMERA_FLASH_SRC_LED1 (0x00000001<<4)
+#define MSM_CAMERA_FLASH_SRC_CALLBACK (0x00000001<<5)
 
 struct msm_camera_sensor_flash_pmic {
 	uint8_t num_of_src;
@@ -130,6 +131,10 @@ struct msm_camera_sensor_flash_led {
 	const int led_name_len;
 };
 
+struct msm_camera_sensor_flash_callback {
+  int (*callback)(int);
+};
+
 struct msm_camera_sensor_flash_src {
 	int flash_sr_type;
 
@@ -141,6 +146,7 @@ struct msm_camera_sensor_flash_src {
 		struct msm_camera_sensor_flash_external
 			ext_driver_src;
 		struct msm_camera_sensor_flash_led led_src;
+                struct msm_camera_sensor_flash_callback callback_driver_src;
 	} _fsrc;
 };
 
