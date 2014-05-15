@@ -210,8 +210,6 @@
 #define VFE_CMD_STATS_BHIST_START                       143
 #define VFE_CMD_STATS_BHIST_STOP                        144
 #define VFE_CMD_SET_BAYER_ENABLE                        145
-#define VFE_CMD_SET_CAMERA_MODE                         146 
-#define VFE_CMD_SET_SW_SHARPNESS_CMD                    147
 
 struct msm_isp_cmd {
 	int32_t  id;

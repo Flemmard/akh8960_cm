@@ -136,7 +136,7 @@ struct camera_flash_cfg {
 	uint16_t low_cap_limit;
 	uint16_t low_cap_limit_dual;
 	uint8_t postpone_led_mode;
-	struct camera_flash_info *flash_info;
+	struct camera_flash_info *flash_info;	
 };
 
 struct msm_camera_rawchip_info {
@@ -155,11 +155,6 @@ enum rawchip_enable_type {
 	RAWCHIP_ENABLE,
 	RAWCHIP_DXO_BYPASS,
 	RAWCHIP_MIPI_BYPASS,
-};
-
-enum hdr_mode_type {
-	NON_HDR_MODE,
-	HDR_MODE,
 };
 
 enum camera_vreg_type {
@@ -181,30 +176,6 @@ struct camera_vreg_t {
 	int min_voltage;
 	int max_voltage;
 	int op_mode;
-};
-
-enum msm_camera_pixel_order_default {
-	MSM_CAMERA_PIXEL_ORDER_GR,
-	MSM_CAMERA_PIXEL_ORDER_RG,
-	MSM_CAMERA_PIXEL_ORDER_BG,
-	MSM_CAMERA_PIXEL_ORDER_GB,
-};
-
-enum sensor_mount_angle {
-	ANGLE_90,
-	ANGLE_180,
-	ANGLE_270,
-};
-
-enum htc_camera_image_type_board {
-	HTC_CAMERA_IMAGE_NONE_BOARD,
-	HTC_CAMERA_IMAGE_YUSHANII_BOARD,
-	HTC_CAMERA_IMAGE_MAX_BOARD,
-};
-
-enum cam_vcm_onoff_type {
-	STATUS_OFF,
-	STATUS_ON,
 };
 #endif /* CONFIG_MSM_CAMERA */
 

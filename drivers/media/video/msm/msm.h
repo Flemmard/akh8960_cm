@@ -31,7 +31,7 @@
 #include <media/msm_isp.h>
 #include <mach/camera.h>
 #include <media/msm_isp.h>
-#include <linux/msm_ion.h>
+#include <linux/ion.h>
 #include <media/msm_gestures.h>
 #include <linux/iommu.h>
 
@@ -155,7 +155,6 @@ enum msm_camera_v4l2_subdev_notify {
 	NOTIFY_AXI_IRQ,
 	NOTIFY_GESTURE_EVT, 
 	NOTIFY_GESTURE_CAM_EVT, 
-	NOTIFY_VFE_CAMIF_ERROR,
 	NOTIFY_INVALID
 };
 
@@ -280,7 +279,6 @@ struct msm_cam_media_controller {
 #ifdef CONFIG_PERFLOCK
 	struct perf_lock *cam_perf_lock;
 #endif
-	struct stats_htc_af htc_af_info;
 };
 
 struct msm_isp_ops {
@@ -415,12 +413,6 @@ struct msm_cam_server_mctl_inst {
 	uint32_t handle;
 };
 
-struct cam_vcm_wa_ctrl {
-	void (*cam_do_vcm_on_cb)(void);
-	void (*cam_do_vcm_off_cb)(void);
-	void (*vcm_vreg_off)(void);
-	void (*actuator_power_off_af)(void);
-};
 
 struct msm_cam_server_dev {
 
@@ -444,7 +436,7 @@ struct msm_cam_server_dev {
 	uint32_t server_evt_id;
 	struct msm_cam_server_mctl_inst mctl[MAX_NUM_ACTIVE_CAMERA];
 	uint32_t mctl_handle_cnt;
-
+	
 	int use_count;
 	
 	struct msm_isp_ops *isp_subdev[MSM_MAX_CAMERA_CONFIGS];
@@ -509,10 +501,6 @@ unsigned long msm_pmem_stats_vtop_lookup(
 				unsigned long buffer,
 				int fd);
 unsigned long msm_pmem_stats_ptov_lookup(
-	struct msm_cam_media_controller *mctl,
-	unsigned long addr, int *fd);
-
-unsigned long msm_pmem_stats_ptov_lookup_2(
 	struct msm_cam_media_controller *mctl,
 	unsigned long addr, int *fd);
 

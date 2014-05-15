@@ -216,7 +216,6 @@ struct msm_mctl_post_proc_cmd {
 #define MSM_CAMERA_LED_HIGH 2
 #define MSM_CAMERA_LED_INIT 3
 #define MSM_CAMERA_LED_RELEASE 4
-#define MSM_CAMERA_LED_VIDEO 30
 
 #define MSM_CAMERA_STROBE_FLASH_NONE 0
 #define MSM_CAMERA_STROBE_FLASH_XENON 1
@@ -649,28 +648,6 @@ struct stats_buff {
 	int fd;
 };
 
-struct stats_htc_af_input {
-	int preview_width;
-	int preview_height;
-	int roi_x;
-	int roi_y;
-	int roi_width;
-	int roi_height;
-	uint8_t af_use_sw_sharpness;
-};
-
-struct stats_htc_af_output {
-	uint32_t hw_frame_id;
-	uint32_t sw_frame_id;
-	uint32_t actuator_frame_id;
-	uint32_t sw_sharpness_value;
-};
-
-struct stats_htc_af {
-	struct stats_htc_af_input af_input;
-	struct stats_htc_af_output af_output;
-};
-
 struct msm_stats_buf {
 	uint8_t awb_ymin;
 	struct stats_buff aec;
@@ -687,9 +664,6 @@ struct msm_stats_buf {
 	int length;
 	struct ion_handle *handle;
 	uint32_t frame_id;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	struct stats_htc_af htc_af_info;
-#endif
 };
 #define MSM_V4L2_EXT_CAPTURE_MODE_DEFAULT 0
 #define MSM_V4L2_EXT_CAPTURE_MODE_PREVIEW \
@@ -836,15 +810,7 @@ struct msm_snapshot_pp_status {
 #define CFG_GET_VCM_OPTIMIZED_POSITIONS 64 
 #define CFG_SET_ACTUATOR_AF_ALGO		65 
 #define CFG_SET_OIS_MODE                         66 
-#define CFG_SET_HDR_EXP_GAIN           67 
-#define CFG_UPDATE_OIS_TBL           68 
-#define CFG_GET_OIS_DEBUG_INFO			69
-#define CFG_GET_OIS_DEBUG_TBL			70
-#define CFG_SET_ACTUATOR_AF_VALUE		71
-#define CFG_SET_HDR_OUTDOOR_FLAG		72 
-#define CFG_SET_OIS_CALIBRATION		73 
-#define CFG_SET_VCM_CALIBRATION 74 
-#define CFG_MAX			        75
+#define CFG_MAX			67
 
 #define CFG_I2C_IOCTL_R_OTP 70
 
@@ -1060,13 +1026,6 @@ struct sensor_pict_fps {
 struct exp_gain_cfg {
 	uint16_t gain;
 	uint32_t line;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	uint32_t long_line;
-	uint32_t short_line;
-	uint16_t long_dig_gain;
-	uint16_t short_dig_gain;
-	uint8_t is_outdoor;
-#endif
 	uint16_t dig_gain; 
 };
 
@@ -1145,10 +1104,6 @@ enum msm_sensor_resolution_t {
 	MSM_SENSOR_RES_VIDEO_HFR,
 	MSM_SENSOR_RES_16_9,
 	MSM_SENSOR_RES_4_3,
-	MSM_SENSOR_RES_VIDEO_HFR_5_3,
-	MSM_SENSOR_RES_5_3,
-	MSM_SENSOR_RES_ZOE,
-	MSM_SENSOR_RES_VIDEO_60FPS,
 	MSM_SENSOR_RES_2,
 	MSM_SENSOR_RES_3,
 	MSM_SENSOR_RES_4,
@@ -1176,13 +1131,7 @@ struct msm_sensor_output_info_t {
 	uint16_t y_even_inc;
 	uint16_t y_odd_inc;
 	uint8_t binning_rawchip;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	uint8_t is_hdr;
 	
-	uint8_t yushan_status_line_enable;
-	uint8_t yushan_status_line; 
-	uint8_t yushan_sensor_status_line; 
-#endif
 };
 
 struct sensor_output_info_t {
@@ -1306,35 +1255,12 @@ typedef struct{
     uint16_t max;
 }vcm_pos;
 
-typedef struct{
-	uint8_t VCM_START_MSB;
-	uint8_t VCM_START_LSB;
-	uint8_t AF_INF_MSB;
-	uint8_t AF_INF_LSB;
-	uint8_t AF_MACRO_MSB;
-	uint8_t AF_MACRO_LSB;
-	
-	uint8_t VCM_BIAS;
-	uint8_t VCM_OFFSET;
-	uint8_t VCM_BOTTOM_MECH_MSB;
-	uint8_t VCM_BOTTOM_MECH_LSB;
-	uint8_t VCM_TOP_MECH_MSB;
-	uint8_t VCM_TOP_MECH_LSB;
-	uint8_t VCM_VENDOR_ID_VERSION;
-	
-	uint8_t VCM_VENDOR;
-	uint8_t ACT_ID;
-}af_value_t;
-
 struct sensor_cfg_data {
 	int cfgtype;
 	int mode;
 	int rs;
 	uint8_t max_steps;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	int8_t sensor_ver;
-	af_value_t af_value;
-#endif
+
 	union {
 		int8_t effect;
 		uint8_t lens_shading;
@@ -1393,29 +1319,6 @@ typedef enum {
   AF_ALGO_QCT,
   AF_ALGO_RAWCHIP,
 } af_algo_t;
-
-typedef enum {
-  VFE_CAMERA_MODE_DEFAULT,
-  VFE_CAMERA_MODE_ZOE,
-  VFE_CAMERA_MODE_ZSL,
-  VFE_CAMERA_MODE_VIDEO,
-  VFE_CAMERA_MODE_VIDEO_60FPS,
-  VFE_CAMERA_MODE_MAX
-} vfe_camera_mode_type;
-
-typedef enum {
-  CAM_MODE_CAMERA_PREVIEW,
-  CAM_MODE_VIDEO_RECORDING,
-} camera_video_mode_type;
-
-struct sensor_actuator_info_t {
-  int16_t startup_mode;
-  camera_video_mode_type cam_mode;
-  uint32_t cur_line_cnt;
-  uint32_t cur_exp_time;
-  int32_t zoom_level;
-  int16_t fast_reset_mode;
-};
 
 struct damping_params_t {
 	uint32_t damping_step;
@@ -1493,9 +1396,6 @@ struct msm_actuator_set_info_t {
 	uint32_t total_steps; 
 	uint16_t gross_steps; 
 	uint16_t fine_steps; 
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	uint16_t ois_mfgtest_in_progress_reload; 
-#endif
 	struct msm_actuator_params_t actuator_params;
 	struct msm_actuator_tuning_params_t af_tuning_params;
 };
@@ -1515,89 +1415,6 @@ struct msm_actuator_get_info_t {
 	uint32_t ver_view_angle_den;
 };
 
-struct msm_actuator_get_ois_info_t {
-	uint32_t gyro_info;
-	uint8_t ois_index;
-};
-
-struct msm_actuator_get_ois_tbl_t {
-	uint32_t tbl_thre[5];
-	uint32_t tbl_info[9][2];
-};
-
-
-enum ois_cal_mode_type_t {
-	OIS_CAL_MODE_READ_FIRMWARE,
-	OIS_CAL_MODE_COLLECT_DATA,
-	OIS_CAL_MODE_WRITE_FIRMWARE,
-};
-
-struct msm_actuator_get_ois_cal_info_t {
-	
-	int16_t x_offset;
-	int16_t y_offset;
-	int16_t temperature;
-	int8_t x_slope;
-	int8_t y_slope;
-
-	
-	enum ois_cal_mode_type_t ois_cal_mode;
-	int16_t cal_collect_interval;
-	int16_t lens_position;
-	int8_t write_flash_status;
-	int8_t otp_check_pass;
-	int8_t cal_method;
-	int8_t cal_current_point;
-	int8_t cal_max_point;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION >= 2)
-	int8_t bypass_ois_cal;
-#endif
-};
-
-struct msm_actuator_get_vcm_cal_info_t {
-    uint8_t offset;
-    uint8_t bias;
-    uint16_t hall_max;
-    uint16_t hall_min;
-    uint8_t rc;
-};
-
-struct msm_flash_ois_cal_data_t {
-	
-	int16_t x_offset_sharp;
-	int16_t y_offset_sharp;
-	int16_t temperature_sharp;
-	int8_t x_slope_sharp;
-	int8_t y_slope_sharp;
-
-	
-	int16_t x_offset_htc;
-	int16_t y_offset_htc;
-	int16_t temperature_htc;
-	int8_t x_slope_htc;
-	int8_t y_slope_htc;
-
-	
-	int8_t write_sharp_data;
-	int8_t write_htc_data;
-};
-
-struct msm_actuator_af_OTP_info_t {
-	uint8_t VCM_OTP_Read;
-	uint16_t VCM_Start;
-	uint16_t VCM_Infinity;
-	uint16_t VCM_Macro;
-	
-	uint8_t VCM_Bias;
-	uint8_t VCM_Offset;
-	uint16_t VCM_Bottom_Mech;
-	uint16_t VCM_Top_Mech;
-	uint8_t VCM_Vendor_Id_Version;
-	
-	uint8_t VCM_Vendor;
-	uint8_t act_id;
-};
-
 enum af_camera_name {
 	ACTUATOR_MAIN_CAM_0,
 	ACTUATOR_MAIN_CAM_1,
@@ -1614,16 +1431,6 @@ struct msm_actuator_cfg_data {
 	int cfgtype;
 	uint8_t is_af_supported;
 	uint8_t is_ois_supported;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-    uint8_t is_cal_supported; 
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION == 3)
-	int8_t enable_focus_step_log;
-	uint8_t small_step_damping;
-	uint8_t medium_step_damping;
-	uint8_t big_step_damping;
-	uint8_t is_af_infinity_supported;
-#endif
-#endif
 	union {
 		struct msm_actuator_move_params_t move;
 		struct msm_actuator_set_info_t set_info;
@@ -1632,14 +1439,6 @@ struct msm_actuator_cfg_data {
 		int16_t curr_step_pos; 
 		af_algo_t af_algo; 
 		int16_t ois_mode; 
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-		struct msm_actuator_get_ois_info_t get_ois_info;
-		struct msm_actuator_get_ois_tbl_t get_ois_tbl;
-		af_value_t af_value;
-		struct msm_actuator_get_ois_cal_info_t get_osi_cal_info; 
-		struct sensor_actuator_info_t sensor_actuator_info; 
-		struct msm_actuator_get_vcm_cal_info_t get_vcm_cal_info; 
-#endif
 	} cfg;
 };
 
@@ -1700,12 +1499,6 @@ struct flash_ctrl_data {
 	} ctrl_data;
 };
 
-enum htc_camera_image_type {
-	HTC_CAMERA_IMAGE_NONE,
-	HTC_CAMERA_IMAGE_YUSHANII,
-	HTC_CAMERA_IMAGE_MAX,
-};
-
 #define GET_NAME			0
 #define GET_PREVIEW_LINE_PER_FRAME	1
 #define GET_PREVIEW_PIXELS_PER_LINE	2
@@ -1728,14 +1521,7 @@ struct msm_camsensor_info {
 	int mount_angle;
 	uint32_t max_width;
 	uint32_t max_height;
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	enum htc_camera_image_type htc_image;	
-	uint8_t hdr_mode;	
-#endif
 	uint8_t use_rawchip; 
-#if defined(CONFIG_MSM_CAMERA) && (CONFIG_HTC_CAMERA_HAL_VERSION > 0)
-	uint8_t video_hdr_capability;
-#endif
 };
 
 #define V4L2_SINGLE_PLANE	0
@@ -1780,7 +1566,7 @@ struct img_plane_info {
 
 #define MSM_CAM_V4L2_IOCTL_GET_EVENT_PAYLOAD \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 5, struct msm_camera_v4l2_ioctl_t *)
-
+	
 #define MSM_CAM_IOCTL_SEND_EVENT \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 6, struct v4l2_event)
 
