@@ -956,7 +956,7 @@ static int mt9v113_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl, int mode)
 	if (config_csi == 0) {
 #ifdef CONFIG_ARCH_MSM8X60
 	if (g_csi_if) {
-		rc = suspend();
+		rc = suspend();  
 
 		if (rc < 0)
 			pr_err("%s: suspend fail\n", __func__);
@@ -981,7 +981,7 @@ static int mt9v113_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl, int mode)
 			pr_err("[CAM] mt9v113 resume failed\n");
 	}
 
-#else
+#else  
 		if (g_csi_if) {
 			s_ctrl->curr_frame_length_lines =
 				s_ctrl->msm_sensor_reg->output_settings[mode].frame_length_lines;
@@ -1029,7 +1029,7 @@ static int mt9v113_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl, int mode)
 			if (rc < 0)
 				pr_err("%s: resume fail\n", __func__);
 		}
-#endif
+#endif  
 	}
 
 #if 0 

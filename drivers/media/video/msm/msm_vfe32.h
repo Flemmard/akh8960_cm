@@ -160,8 +160,6 @@ enum vfe_output_state {
 	VFE_STATE_STARTED,
 	VFE_STATE_STOP_REQUESTED,
 	VFE_STATE_STOPPED,
-	VFE_STATE_HW_STOP_REQUESTED,
-	VFE_STATE_HW_STOPPED,
 };
 
 #define V32_CAMIF_OFF             0x000001E4
@@ -954,7 +952,6 @@ struct vfe32_ctrl_type {
 	uint32_t frame_skip_cnt;
 	uint32_t frame_skip_pattern;
 	uint32_t snapshot_frame_cnt;
-	vfe_camera_mode_type vfe_camera_mode; 
 };
 
 #define statsAeNum      0

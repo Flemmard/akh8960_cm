@@ -139,7 +139,6 @@ static int msm_pmem_table_add(struct hlist_head *ptype,
 	if (ion_map_iommu(client, region->handle, CAMERA_DOMAIN, GEN_POOL,
 				  SZ_4K, 0, &paddr, &len, 0, 0) < 0)
 		goto out2;
-
 #elif CONFIG_ANDROID_PMEM
 	rc = get_pmem_file(info->fd, &paddr, &kvstart, &len, &file);
 	if (rc < 0) {
@@ -386,27 +385,6 @@ unsigned long msm_pmem_stats_ptov_lookup(
 			*fd = region->info.fd;
 			region->info.active = 0;
 			return (unsigned long)(region->info.vaddr);
-		}
-	}
-
-    if (addr != 0)
-        pr_err("%s: abnormal addr == 0X%x\n", __func__, (uint32_t)addr);
-
-	return 0;
-}
-
-unsigned long msm_pmem_stats_ptov_lookup_2(
-		struct msm_cam_media_controller *mctl,
-		unsigned long addr, int *fd)
-{
-	struct msm_pmem_region *region;
-	struct hlist_node *node, *n;
-
-	hlist_for_each_entry_safe(region, node, n,
-	&mctl->stats_info.pmem_stats_list, list) {
-		if (addr == region->paddr) {
-			*fd = region->info.fd;
-			return (unsigned long)(region->vaddr);
 		}
 	}
 
