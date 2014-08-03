@@ -23,18 +23,7 @@
 #include <linux/msm_thermal.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
-#include <linux/err.h>
-#include <linux/slab.h>
-#include <linux/of.h>
-#include <linux/sysfs.h>
-#include <linux/types.h>
-#include <linux/android_alarm.h>
-#include <linux/thermal.h>
-#include <mach/rpm-regulator.h>
-#include <mach/rpm-regulator-smd.h>
-#include <linux/regulator/consumer.h>
-
-#define MAX_RAILS 5
+#include <mach/cpufreq.h>
 
 static int enabled;
 static struct msm_thermal_data msm_thermal_info;
