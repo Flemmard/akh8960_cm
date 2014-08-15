@@ -35,12 +35,12 @@
 
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-#define DEF_FREQUENCY_UP_THRESHOLD		(70)
+#define DEF_FREQUENCY_UP_THRESHOLD		(90)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define BOOSTED_SAMPLING_DOWN_FACTOR		(10)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(5)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(70)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(80)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(5000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
@@ -49,7 +49,7 @@
 #define DEFAULT_FREQ_BOOST_TIME			(500000)
 #define MAX_FREQ_BOOST_TIME			(5000000)
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
-#define FREQ_FOR_RESPONSIVENESS			(2265600)
+#define FREQ_FOR_RESPONSIVENESS			(1026000)
 
 static u64 hyper_freq_boosted_time;
 
@@ -96,11 +96,11 @@ struct cpufreq_governor cpufreq_gov_HYPER = {
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
-	cputime64_t prev_cpu_idle;
-	cputime64_t prev_cpu_iowait;
-	cputime64_t prev_cpu_wall;
+	u64 prev_cpu_idle;
+	u64 prev_cpu_iowait;
+	u64 prev_cpu_wall;
 	unsigned int prev_cpu_wall_delta;
-	cputime64_t prev_cpu_nice;
+	u64 prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	struct cpufreq_frequency_table *freq_table;
@@ -155,7 +155,7 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
-	.boostfreq = 2265600,
+	.boostfreq = 1458000,
 	.freq_step = FREQ_STEP,
 	.freq_responsiveness = FREQ_FOR_RESPONSIVENESS
 };
@@ -640,8 +640,8 @@ static ssize_t store_freq_responsiveness(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	if (input > 2496000)
-		input = 2496000;
+	if (input > 1512000)
+		input = 1512000;
 
 	if (input < 300000)
 		input = 300000;
@@ -753,7 +753,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	max_load_freq = 0;
 
 	for_each_cpu(j, policy->cpus) {
-		cputime64_t cur_wall_time, cur_idle_time, cur_iowait_time;
+		u64 cur_wall_time, cur_idle_time, cur_iowait_time;
 		unsigned int idle_time, wall_time, iowait_time;
 		unsigned int load_freq;
 		int freq_avg;
@@ -850,7 +850,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		/* calculate the scaled load across CPU */
 		load_at_max_freq += (cur_load * policy->cur) /
-					policy->cpuinfo.max_freq;
+					policy->max;
 
 		avg_load_at_max_freq += ((load_at_max_freq +
 				j_dbs_info->load_at_prev_sample) / 2);
@@ -1147,7 +1147,7 @@ static struct notifier_block hyper_qos_dvfs_lat_nb = {
 
 static int __init cpufreq_gov_dbs_init(void)
 {
-	cputime64_t wall;
+	u64 wall;
 	u64 idle_time;
 	int cpu = get_cpu();
 	int err = 0;
