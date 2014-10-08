@@ -48,8 +48,8 @@
 #define FREQ_STEP				(55)
 #define DEFAULT_FREQ_BOOST_TIME			(500000)
 #define MAX_FREQ_BOOST_TIME			(5000000)
-#define UP_THRESHOLD_AT_MIN_FREQ		(40)
-#define FREQ_FOR_RESPONSIVENESS			(1026000)
+#define UP_THRESHOLD_AT_MIN_FREQ		(85)
+#define FREQ_FOR_RESPONSIVENESS			(702000)
 
 static u64 hyper_freq_boosted_time;
 
@@ -66,10 +66,10 @@ static u64 hyper_freq_boosted_time;
 #define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
-#define DEFAULT_SAMPLING_RATE			(40000)
-#define BOOSTED_SAMPLING_RATE			(20000)
+#define DEFAULT_SAMPLING_RATE			(80000)
+#define BOOSTED_SAMPLING_RATE			(40000)
 #define LATENCY_MULTIPLIER			(1000)
-#define MIN_LATENCY_MULTIPLIER			(20)
+#define MIN_LATENCY_MULTIPLIER			(100)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
 
 /* have the timer rate booted for this much time 4s*/
