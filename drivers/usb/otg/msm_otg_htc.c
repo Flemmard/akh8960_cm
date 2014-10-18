@@ -109,11 +109,9 @@ static void send_usb_connect_notify(struct work_struct *w)
 		if (notifier->func != NULL) {
 			/* Notify other drivers about connect type. */
 			/* use slow charging for unknown type*/
-#if 0
 			if (motg->connect_type == CONNECT_TYPE_UNKNOWN)
 				notifier->func(CONNECT_TYPE_USB);
 			else
-#endif
 				notifier->func(motg->connect_type);
 		}
 	}
