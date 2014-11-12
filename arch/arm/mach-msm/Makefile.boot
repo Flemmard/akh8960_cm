@@ -36,8 +36,6 @@ endif
 # MSM8x60
 ifeq ($(CONFIG_MACH_HTC),y)
    zreladdr-$(CONFIG_ARCH_MSM8X60)	:= 0x48008000
-params_phys-$(CONFIG_ARCH_MSM8X60)	:= 0x48000100
-initrd_phys-$(CONFIG_ARCH_MSM8X60)	:= 0x49000000
 else
    zreladdr-$(CONFIG_ARCH_MSM8X60)	:= 0x40208000
 endif
