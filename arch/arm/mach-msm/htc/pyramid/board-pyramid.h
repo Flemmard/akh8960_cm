@@ -55,16 +55,14 @@
 #define MSM_ION_MM_SIZE      0x3D00000
 #define MSM_ION_MFC_SIZE     0x100000
 #define MSM_ION_SF_SIZE      0x2A00000
-#define MSM_ION_WB_SIZE      0x500000
 #define MSM_ION_AUDIO_SIZE   0x4CF000
 
-#define MSM_ION_HEAP_NUM     7
+#define MSM_ION_HEAP_NUM     6
 
 #define MSM_ION_MM_FW_BASE   0x38000000
 #define MSM_ION_MM_BASE      0x38200000
 #define MSM_ION_MFC_BASE     0x3BF00000
 #define MSM_ION_SF_BASE      0x40400000
-#define MSM_ION_WB_BASE      0x45C00000
 /*** END Memory map ***/
 
 /* GPIO definition */
