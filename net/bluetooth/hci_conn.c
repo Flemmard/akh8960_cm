@@ -394,6 +394,22 @@ void hci_le_start_enc(struct hci_conn *conn, __le16 ediv, __u8 rand[8],
 }
 EXPORT_SYMBOL(hci_le_start_enc);
 
+void hci_le_ltk_reply(struct hci_conn *conn, u8 ltk[16])
+{
+	struct hci_dev *hdev = conn->hdev;
+	struct hci_cp_le_ltk_reply cp;
+
+	BT_DBG("%p", conn);
+
+	memset(&cp, 0, sizeof(cp));
+
+	cp.handle = cpu_to_le16(conn->handle);
+	memcpy(cp.ltk, ltk, sizeof(cp.ltk));
+
+	hci_send_cmd(hdev, HCI_OP_LE_LTK_REPLY, sizeof(cp), &cp);
+}
+EXPORT_SYMBOL(hci_le_ltk_reply);
+
 void hci_le_ltk_neg_reply(struct hci_conn *conn)
 {
 	struct hci_dev *hdev = conn->hdev;
@@ -528,6 +544,7 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 	conn->disc_timeout = HCI_DISCONN_TIMEOUT;
 	conn->conn_valid = true;
 	spin_lock_init(&conn->lock);
+	wake_lock_init(&conn->idle_lock, WAKE_LOCK_SUSPEND, "bt_idle");
 
 	switch (type) {
 	case ACL_LINK:
@@ -605,6 +622,7 @@ int hci_conn_del(struct hci_conn *conn)
 
 	/* Make sure no timers are running */
 	del_timer(&conn->idle_timer);
+	wake_lock_destroy(&conn->idle_lock);
 	del_timer(&conn->disc_timer);
 	del_timer(&conn->smp_timer);
 	__cancel_delayed_work(&conn->rssi_update_work);
@@ -1068,6 +1086,7 @@ timer:
 		if (conn->conn_valid) {
 			mod_timer(&conn->idle_timer,
 				jiffies + msecs_to_jiffies(hdev->idle_timeout));
+			wake_lock(&conn->idle_lock);
 		}
 		spin_unlock_bh(&conn->lock);
 	}

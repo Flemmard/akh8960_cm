@@ -49,8 +49,8 @@
 
 #define VERSION "0.3"
 
-static bool txcrc = true;
-static bool hciextn = true;
+static int txcrc = 1;
+static int hciextn = 1;
 
 #define BCSP_TXWINSIZE	4
 
