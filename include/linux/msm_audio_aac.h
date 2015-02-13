@@ -63,7 +63,6 @@ struct msm_audio_aac_config {
 	unsigned short sbr_ps_on_flag;
 	unsigned short dual_mono_mode;
 	unsigned short channel_configuration;
-	unsigned short sample_rate;
 };
 
 struct msm_audio_aac_enc_config {

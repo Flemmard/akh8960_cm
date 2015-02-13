@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -43,13 +43,8 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		struct msm_audio_aac_config *aac_config;
 		uint32_t sbr_ps = 0x00;
 		aac_config = (struct msm_audio_aac_config *)audio->codec_cfg;
-		if (audio->feedback == TUNNEL_MODE) {
-			aac_cfg.sample_rate = aac_config->sample_rate;
-			aac_cfg.ch_cfg = aac_config->channel_configuration;
-		} else {
-			aac_cfg.sample_rate =  audio->pcm_cfg.sample_rate;
-			aac_cfg.ch_cfg = audio->pcm_cfg.channel_count;
-		}
+		aac_cfg.ch_cfg = aac_config->channel_configuration;
+		aac_cfg.sample_rate =  audio->pcm_cfg.sample_rate;
 		pr_debug("%s: AUDIO_START session_id[%d]\n", __func__,
 						audio->ac->session);
 		if (audio->feedback == NON_TUNNEL_MODE) {
@@ -252,12 +247,6 @@ static int audio_open(struct inode *inode, struct file *file)
 		kfree(audio);
 		return -ENOMEM;
 	}
-	rc = audio_aio_open(audio, file);
-	if (rc < 0) {
-		pr_err("%s: audio_aio_open rc=%d\n",
-			__func__, rc);
-		goto fail;
-	}
 
 	/* open in T/NT mode */
 	if ((file->f_mode & FMODE_WRITE) && (file->f_mode & FMODE_READ)) {
@@ -285,6 +274,11 @@ static int audio_open(struct inode *inode, struct file *file)
 	} else {
 		pr_err("Not supported mode\n");
 		rc = -EACCES;
+		goto fail;
+	}
+	rc = audio_aio_open(audio, file);
+	if (rc < 0) {
+		pr_err("audio_aio_open rc=%d\n", rc);
 		goto fail;
 	}
 

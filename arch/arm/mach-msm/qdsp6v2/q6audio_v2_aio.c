@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,7 +19,7 @@
 #include <linux/wait.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <asm/ioctls.h>
 #include "audio_utils_aio.h"
 
@@ -37,7 +37,6 @@ void q6_audio_cb(uint32_t opcode, uint32_t token,
 	case ASM_STREAM_CMD_SET_ENCDEC_PARAM:
 	case ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY:
 	case ASM_DATA_EVENT_ENC_SR_CM_CHANGE_NOTIFY:
-	case RESET_EVENTS:
 		audio_aio_cb(opcode, token, payload, audio);
 		break;
 	default:
@@ -106,53 +105,8 @@ void audio_aio_cb(uint32_t opcode, uint32_t token,
 		e_payload.stream_info.sample_rate = audio->pcm_cfg.sample_rate;
 		audio_aio_post_event(audio, AUDIO_EVENT_STREAM_INFO, e_payload);
 		break;
-	case RESET_EVENTS:
-		pr_debug("%s: Received opcode:0x%x\n", __func__, opcode);
-		audio->stopped = 1;
-		wake_up(&audio->event_wait);
-		break;
 	default:
 		break;
-	}
-}
-
-void extract_meta_out_info(struct q6audio_aio *audio,
-		struct audio_aio_buffer_node *buf_node, int dir)
-{
-	struct dec_meta_out *meta_data = buf_node->kvaddr;
-	uint32_t temp;
-
-	if (dir) { /* input buffer - Write */
-		if (audio->buf_cfg.meta_info_enable)
-			memcpy(&buf_node->meta_info.meta_in,
-			(char *)buf_node->kvaddr, sizeof(struct dec_meta_in));
-		else
-			memset(&buf_node->meta_info.meta_in,
-			0, sizeof(struct dec_meta_in));
-		pr_debug("%s[%p]:i/p: msw_ts 0x%lx lsw_ts 0x%lx nflags 0x%8x\n",
-			__func__, audio,
-			buf_node->meta_info.meta_in.ntimestamp.highpart,
-			buf_node->meta_info.meta_in.ntimestamp.lowpart,
-			buf_node->meta_info.meta_in.nflags);
-	} else { /* output buffer - Read */
-		memcpy((char *)buf_node->kvaddr,
-			&buf_node->meta_info.meta_out,
-			sizeof(struct dec_meta_out));
-		meta_data->meta_out_dsp[0].nflags = 0x00000000;
-		temp = meta_data->meta_out_dsp[0].msw_ts;
-		meta_data->meta_out_dsp[0].msw_ts =
-				meta_data->meta_out_dsp[0].lsw_ts;
-		meta_data->meta_out_dsp[0].lsw_ts = temp;
-
-		pr_debug("%s[%p]:o/p: msw_ts 0x%8x lsw_ts 0x%8x nflags 0x%8x, num_frames = %d\n",
-		__func__, audio,
-		((struct dec_meta_out *)buf_node->kvaddr)->\
-			meta_out_dsp[0].msw_ts,
-		((struct dec_meta_out *)buf_node->kvaddr)->\
-			meta_out_dsp[0].lsw_ts,
-		((struct dec_meta_out *)buf_node->kvaddr)->\
-			meta_out_dsp[0].nflags,
-		((struct dec_meta_out *)buf_node->kvaddr)->num_of_frames);
 	}
 }
 
@@ -174,11 +128,7 @@ void audio_aio_async_read_ack(struct q6audio_aio *audio, uint32_t token,
 	atomic_add(payload[9], &audio->in_samples);
 
 	spin_lock_irqsave(&audio->dsp_lock, flags);
-	if (list_empty(&audio->in_queue)) {
-		spin_unlock_irqrestore(&audio->dsp_lock, flags);
-		pr_warning("%s unexpected ack from dsp\n", __func__);
-		return;
-	}
+	BUG_ON(list_empty(&audio->in_queue));
 	filled_buf = list_first_entry(&audio->in_queue,
 					struct audio_aio_buffer_node, list);
 

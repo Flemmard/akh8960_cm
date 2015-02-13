@@ -47,11 +47,6 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		audio->eos_rsp = 0;
 		audio->eos_flag = 0;
 		if (!rc) {
-			rc = enable_volume_ramp(audio);
-			if (rc < 0) {
-				pr_err("%s: Failed to enable volume ramp\n",
-					__func__);
-			}
 			audio->enabled = 1;
 		} else {
 			audio->enabled = 0;
@@ -98,12 +93,6 @@ static int audio_open(struct inode *inode, struct file *file)
 		kfree(audio);
 		return -ENOMEM;
 	}
-	rc = audio_aio_open(audio, file);
-	if (rc < 0) {
-		pr_err("%s: audio_aio_open rc=%d\n",
-			__func__, rc);
-		goto fail;
-	}
 
 	/* open in T/NT mode */
 	if ((file->f_mode & FMODE_WRITE) && (file->f_mode & FMODE_READ)) {
@@ -131,6 +120,11 @@ static int audio_open(struct inode *inode, struct file *file)
 	} else {
 		pr_err("Not supported mode\n");
 		rc = -EACCES;
+		goto fail;
+	}
+	rc = audio_aio_open(audio, file);
+	if (rc < 0) {
+		pr_err("audio_aio_open rc=%d\n", rc);
 		goto fail;
 	}
 

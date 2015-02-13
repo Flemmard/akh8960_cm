@@ -21,7 +21,7 @@
 #include <linux/wait.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <asm/ioctls.h>
 #include <linux/debugfs.h>
 #include "audio_utils_aio.h"
@@ -91,6 +91,39 @@ static int insert_meta_data_flush(struct q6audio_aio *audio,
 	meta_data->meta_out_dsp[0].nflags = 0x0;
 	return sizeof(struct dec_meta_out) +
 		sizeof(meta_data->meta_out_dsp[0]);
+}
+
+void extract_meta_out_info(struct q6audio_aio *audio,
+		struct audio_aio_buffer_node *buf_node, int dir)
+{
+	struct dec_meta_out *meta_data = buf_node->kvaddr;
+	if (dir) { /* input buffer - Write */
+		if (audio->buf_cfg.meta_info_enable)
+			memcpy(&buf_node->meta_info.meta_in,
+			(char *)buf_node->kvaddr, sizeof(struct dec_meta_in));
+		else
+			memset(&buf_node->meta_info.meta_in,
+			0, sizeof(struct dec_meta_in));
+		pr_debug("%s[%p]:i/p: msw_ts 0x%lx lsw_ts 0x%lx nflags 0x%8x\n",
+			__func__, audio,
+			buf_node->meta_info.meta_in.ntimestamp.highpart,
+			buf_node->meta_info.meta_in.ntimestamp.lowpart,
+			buf_node->meta_info.meta_in.nflags);
+	} else { /* output buffer - Read */
+		memcpy((char *)buf_node->kvaddr,
+			&buf_node->meta_info.meta_out,
+			sizeof(struct dec_meta_out));
+		meta_data->meta_out_dsp[0].nflags = 0x00000000;
+		pr_debug("%s[%p]:o/p: msw_ts 0x%8x lsw_ts 0x%8x nflags 0x%8x, num_frames = %d\n",
+		__func__, audio,
+		((struct dec_meta_out *)buf_node->kvaddr)->\
+			meta_out_dsp[0].msw_ts,
+		((struct dec_meta_out *)buf_node->kvaddr)->\
+			meta_out_dsp[0].lsw_ts,
+		((struct dec_meta_out *)buf_node->kvaddr)->\
+			meta_out_dsp[0].nflags,
+		((struct dec_meta_out *)buf_node->kvaddr)->num_of_frames);
+	}
 }
 
 static int audio_aio_ion_lookup_vaddr(struct q6audio_aio *audio, void *addr,
@@ -435,122 +468,6 @@ static void audio_aio_unmap_ion_region(struct q6audio_aio *audio)
 		}
 	}
 }
-
-#ifdef CONFIG_USE_DEV_CTRL_VOLUME
-
-static void audio_aio_listner(u32 evt_id, union auddev_evt_data *evt_payload,
-			void *private_data)
-{
-	struct q6audio_aio *audio = (struct q6audio_aio *) private_data;
-	int rc  = 0;
-
-	switch (evt_id) {
-	case AUDDEV_EVT_STREAM_VOL_CHG:
-		audio->volume = evt_payload->session_vol;
-		pr_debug("%s[%p]: AUDDEV_EVT_STREAM_VOL_CHG, stream vol %d, enabled = %d\n",
-			__func__, audio, audio->volume, audio->enabled);
-		if (audio->enabled == 1) {
-			if (audio->ac) {
-				rc = q6asm_set_volume(audio->ac, audio->volume);
-				if (rc < 0) {
-					pr_err("%s[%p]: Send Volume command failed rc=%d\n",
-						__func__, audio, rc);
-				}
-			}
-		}
-		break;
-	default:
-		pr_err("%s[%p]:ERROR:wrong event\n", __func__, audio);
-		break;
-	}
-}
-
-int register_volume_listener(struct q6audio_aio *audio)
-{
-	int rc  = 0;
-	audio->device_events = AUDDEV_EVT_STREAM_VOL_CHG;
-	audio->drv_status &= ~ADRV_STATUS_PAUSE;
-
-	rc = auddev_register_evt_listner(audio->device_events,
-					AUDDEV_CLNT_DEC,
-					audio->ac->session,
-					audio_aio_listner,
-					(void *)audio);
-	if (rc < 0) {
-		pr_err("%s[%p]: Event listener failed\n", __func__, audio);
-		rc = -EACCES;
-	}
-	return rc;
-}
-void unregister_volume_listener(struct q6audio_aio *audio)
-{
-	auddev_unregister_evt_listner(AUDDEV_CLNT_DEC, audio->ac->session);
-}
-
-int enable_volume_ramp(struct q6audio_aio *audio)
-{
-	int rc = 0;
-	struct asm_softpause_params softpause;
-	struct asm_softvolume_params softvol;
-
-	if (audio->ac == NULL)
-		return -EINVAL;
-	pr_debug("%s[%p]\n", __func__, audio);
-	softpause.enable = SOFT_PAUSE_ENABLE;
-	softpause.period = SOFT_PAUSE_PERIOD;
-	softpause.step = SOFT_PAUSE_STEP;
-	softpause.rampingcurve = SOFT_PAUSE_CURVE_LINEAR;
-
-	softvol.period = SOFT_VOLUME_PERIOD;
-	softvol.step = SOFT_VOLUME_STEP;
-	softvol.rampingcurve = SOFT_VOLUME_CURVE_LINEAR;
-
-	if (softpause.rampingcurve == SOFT_PAUSE_CURVE_LINEAR)
-		softpause.step = SOFT_PAUSE_STEP_LINEAR;
-	if (softvol.rampingcurve == SOFT_VOLUME_CURVE_LINEAR)
-		softvol.step = SOFT_VOLUME_STEP_LINEAR;
-	rc = q6asm_set_volume(audio->ac, audio->volume);
-	if (rc < 0) {
-		pr_err("%s: Send Volume command failed rc=%d\n",
-			__func__, rc);
-		return rc;
-	}
-	rc = q6asm_set_softpause(audio->ac, &softpause);
-	if (rc < 0) {
-		pr_err("%s: Send SoftPause Param failed rc=%d\n",
-			__func__, rc);
-		return rc;
-	}
-	rc = q6asm_set_softvolume(audio->ac, &softvol);
-	if (rc < 0) {
-		pr_err("%s: Send SoftVolume Param failed rc=%d\n",
-		__func__, rc);
-		return rc;
-	}
-	/* disable mute by default */
-	rc = q6asm_set_mute(audio->ac, 0);
-	if (rc < 0) {
-		pr_err("%s: Send mute command failed rc=%d\n",
-			__func__, rc);
-		return rc;
-	}
-	return rc;
-}
-
-#else /*CONFIG_USE_DEV_CTRL_VOLUME*/
-int register_volume_listener(struct q6audio_aio *audio)
-{
-	return 0;/* do nothing */
-}
-void unregister_volume_listener(struct q6audio_aio *audio)
-{
-	return;/* do nothing */
-}
-int enable_volume_ramp(struct q6audio_aio *audio)
-{
-	return 0; /* do nothing */
-}
-#endif /*CONFIG_USE_DEV_CTRL_VOLUME*/
 
 int audio_aio_release(struct inode *inode, struct file *file)
 {

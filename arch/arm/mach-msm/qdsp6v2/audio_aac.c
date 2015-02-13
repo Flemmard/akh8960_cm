@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -81,13 +81,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		aac_cfg.spectral_data_resilience =
 			aac_config->aac_spectral_data_resilience_flag;
 		aac_cfg.ch_cfg = audio->pcm_cfg.channel_count;
-		if (audio->feedback == TUNNEL_MODE) {
-			aac_cfg.sample_rate = aac_config->sample_rate;
-			aac_cfg.ch_cfg = aac_config->channel_configuration;
-		} else {
-			aac_cfg.sample_rate =  audio->pcm_cfg.sample_rate;
-			aac_cfg.ch_cfg = audio->pcm_cfg.channel_count;
-		}
+		aac_cfg.sample_rate =  audio->pcm_cfg.sample_rate;
 
 		pr_debug("%s:format=%x aot=%d  ch=%d sr=%d\n",
 			__func__, aac_cfg.format,
@@ -104,11 +98,6 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		audio->eos_rsp = 0;
 		audio->eos_flag = 0;
 		if (!rc) {
-			rc = enable_volume_ramp(audio);
-			if (rc < 0) {
-				pr_err("%s: Failed to enable volume ramp\n",
-					__func__);
-			}
 			audio->enabled = 1;
 		} else {
 			audio->enabled = 0;
@@ -232,12 +221,7 @@ static int audio_open(struct inode *inode, struct file *file)
 		kfree(audio);
 		return -ENOMEM;
 	}
-	rc = audio_aio_open(audio, file);
-	if (rc < 0) {
-		pr_err("%s: audio_aio_open rc=%d\n",
-			__func__, rc);
-		goto fail;
-	}
+
 	/* open in T/NT mode */
 	if ((file->f_mode & FMODE_WRITE) && (file->f_mode & FMODE_READ)) {
 		rc = q6asm_open_read_write(audio->ac, FORMAT_LINEAR_PCM,
@@ -264,6 +248,11 @@ static int audio_open(struct inode *inode, struct file *file)
 	} else {
 		pr_err("Not supported mode\n");
 		rc = -EACCES;
+		goto fail;
+	}
+	rc = audio_aio_open(audio, file);
+	if (rc < 0) {
+		pr_err("audio_aio_open rc=%d\n", rc);
 		goto fail;
 	}
 

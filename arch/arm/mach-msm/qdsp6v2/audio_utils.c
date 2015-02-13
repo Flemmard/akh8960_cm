@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, 2014 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,15 +19,11 @@
 #include <linux/wait.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <asm/ioctls.h>
 #include "audio_utils.h"
 
-#define MIN_FRAME_SIZE  1536
-#define NUM_FRAMES      5
-#define META_SIZE       (sizeof(struct meta_out_dsp))
-#define FRAME_SIZE      (1 + ((MIN_FRAME_SIZE + META_SIZE) * NUM_FRAMES))
-
+#define FRAME_SIZE            (1 + ((1536+sizeof(struct meta_out_dsp)) * 5))
 static int audio_in_pause(struct q6audio_in  *audio)
 {
 	int rc;
@@ -104,7 +100,7 @@ int audio_in_enable(struct q6audio_in  *audio)
 int audio_in_disable(struct q6audio_in  *audio)
 {
 	int rc = 0;
-	if (!audio->stopped) {
+	if (audio->opened) {
 		audio->enabled = 0;
 		audio->opened = 0;
 		pr_debug("%s:session id %d: inbytes[%d] insamples[%d]\n",
@@ -114,8 +110,8 @@ int audio_in_disable(struct q6audio_in  *audio)
 
 		rc = q6asm_cmd(audio->ac, CMD_CLOSE);
 		if (rc < 0)
-			pr_err("%s:session id %d: Failed to close the session rc=%d\n",
-				__func__, audio->ac->session,
+			pr_err("%s:session id %d: Failed to close the"
+				"session rc=%d\n", __func__, audio->ac->session,
 				rc);
 		audio->stopped = 1;
 		memset(audio->out_frame_info, 0,
@@ -140,8 +136,8 @@ int audio_in_buf_alloc(struct q6audio_in *audio)
 				ALIGN_BUF_SIZE(audio->pcm_cfg.buffer_size),
 				audio->pcm_cfg.buffer_count);
 			if (rc < 0) {
-				pr_err("%s:session id %d: Buffer Alloc failed\n",
-						__func__,
+				pr_err("%s:session id %d: Buffer Alloc"
+						"failed\n", __func__,
 						audio->ac->session);
 				rc = -ENOMEM;
 				break;
@@ -177,8 +173,8 @@ int audio_in_buf_alloc(struct q6audio_in *audio)
 				ALIGN_BUF_SIZE(audio->pcm_cfg.buffer_size),
 				audio->pcm_cfg.buffer_count);
 			if (rc < 0) {
-				pr_err("%s:session id %d: Buffer Alloc failed\n",
-					__func__,
+				pr_err("%s:session id %d: Buffer Alloc"
+					"failed\n", __func__,
 					audio->ac->session);
 				rc = -ENOMEM;
 				break;
@@ -259,27 +255,24 @@ long audio_in_ioctl(struct file *file,
 		   but with in maximum frames number */
 		if ((cfg.buffer_size < (audio->min_frame_size+ \
 			sizeof(struct meta_out_dsp))) ||
-			(cfg.buffer_count < FRAME_NUM)) {
+			(cfg.buffer_count > FRAME_NUM)) {
 			rc = -EINVAL;
 			break;
 		}
-		if ((cfg.buffer_size > FRAME_SIZE) ||
-			(cfg.buffer_count != FRAME_NUM)) {
+		if (cfg.buffer_size > FRAME_SIZE) {
 			rc = -EINVAL;
 			break;
 		}
 		audio->str_cfg.buffer_size = cfg.buffer_size;
 		audio->str_cfg.buffer_count = cfg.buffer_count;
-		if(audio->opened){
-			rc = q6asm_audio_client_buf_alloc(OUT,audio->ac,
+		rc = q6asm_audio_client_buf_alloc(OUT, audio->ac,
 				ALIGN_BUF_SIZE(audio->str_cfg.buffer_size),
 				audio->str_cfg.buffer_count);
-			if (rc < 0) {
+		if (rc < 0) {
 			pr_err("%s: session id %d: Buffer Alloc failed rc=%d\n",
-				__func__, audio->ac->session, rc);
+					__func__, audio->ac->session, rc);
 			rc = -ENOMEM;
 			break;
-			}
 		}
 		audio->buf_alloc |= BUF_ALLOC_OUT;
 		rc = 0;
@@ -316,15 +309,15 @@ long audio_in_ioctl(struct file *file,
 		}
 		audio->buf_cfg.meta_info_enable = cfg.meta_info_enable;
 		audio->buf_cfg.frames_per_buf = cfg.frames_per_buf;
-		pr_debug("%s:session id %d: Set-buf-cfg: meta[%d] framesperbuf[%d]\n",
-				__func__,
+		pr_debug("%s:session id %d: Set-buf-cfg: meta[%d]"
+				"framesperbuf[%d]\n", __func__,
 				audio->ac->session, cfg.meta_info_enable,
 				cfg.frames_per_buf);
 		break;
 	}
 	case AUDIO_GET_BUF_CFG: {
-		pr_debug("%s:session id %d: Get-buf-cfg: meta[%d] framesperbuf[%d]\n",
-			__func__,
+		pr_debug("%s:session id %d: Get-buf-cfg: meta[%d]"
+			"framesperbuf[%d]\n", __func__,
 			audio->ac->session, audio->buf_cfg.meta_info_enable,
 			audio->buf_cfg.frames_per_buf);
 
@@ -347,8 +340,8 @@ long audio_in_ioctl(struct file *file,
 			break;
 		}
 		if (audio->feedback != NON_TUNNEL_MODE) {
-			pr_err("%s:session id %d: Not sufficient permission to change the record mode\n",
-					__func__,
+			pr_err("%s:session id %d: Not sufficient permission to"
+					"change the record mode\n", __func__,
 					audio->ac->session);
 			rc = -EACCES;
 			break;
@@ -361,16 +354,14 @@ long audio_in_ioctl(struct file *file,
 		audio->pcm_cfg.buffer_size  = cfg.buffer_size;
 		audio->pcm_cfg.channel_count = cfg.channel_count;
 		audio->pcm_cfg.sample_rate = cfg.sample_rate;
-		if(audio->opened && audio->feedback == NON_TUNNEL_MODE){
-			rc = q6asm_audio_client_buf_alloc(IN, audio->ac,
-				ALIGN_BUF_SIZE(audio->pcm_cfg.buffer_size),
-				audio->pcm_cfg.buffer_count);
-			if(rc < 0){
-				pr_err("%s:session id %d: Buffer Alloc failed\n",
-						__func__,audio->ac->session);
-				rc = -ENOMEM;
-				break;
-			}
+		rc = q6asm_audio_client_buf_alloc(IN, audio->ac,
+			ALIGN_BUF_SIZE(audio->pcm_cfg.buffer_size),
+			audio->pcm_cfg.buffer_count);
+		if (rc < 0) {
+			pr_err("%s:session id %d: Buffer Alloc failed\n",
+				__func__, audio->ac->session);
+			rc = -ENOMEM;
+			break;
 		}
 		audio->buf_alloc |= BUF_ALLOC_IN;
 		rc = 0;
@@ -414,22 +405,15 @@ ssize_t audio_in_read(struct file *file,
 			audio->read_wait,
 			((atomic_read(&audio->out_count) > 0) ||
 			(audio->stopped) ||
-			 audio->rflush || audio->eos_rsp ||
-			audio->event_abort));
-
-		if (audio->event_abort) {
-			rc = -EIO;
-			break;
-		}
-
+			 audio->rflush || audio->eos_rsp));
 
 		if (rc < 0)
 			break;
 
 		if ((audio->stopped && !(atomic_read(&audio->out_count))) ||
 			audio->rflush) {
-			pr_debug("%s:session id %d: driver in stop state or flush,No more buf to read",
-				__func__,
+			pr_debug("%s:session id %d: driver in stop state or"
+				"flush,No more buf to read", __func__,
 				audio->ac->session);
 			rc = 0;/* End of File */
 			break;
@@ -495,8 +479,8 @@ ssize_t audio_in_read(struct file *file,
 			count -= bytes_to_copy;
 			buf += bytes_to_copy;
 		} else {
-			pr_err("%s:session id %d: short read data[%p] bytesavail[%d]bytesrequest[%d]\n",
-				__func__,
+			pr_err("%s:session id %d: short read data[%p]"
+				"bytesavail[%d]bytesrequest[%d]\n", __func__,
 				audio->ac->session,
 				data, size, count);
 		}
@@ -551,13 +535,7 @@ ssize_t audio_in_write(struct file *file,
 		rc = wait_event_interruptible(audio->write_wait,
 				     ((atomic_read(&audio->in_count) > 0) ||
 				      (audio->stopped) ||
-				      (audio->wflush) || (audio->event_abort)));
-
-		if (audio->event_abort) {
-			rc = -EIO;
-			break;
-		}
-
+				      (audio->wflush)));
 		if (rc < 0)
 			break;
 		if (audio->stopped || audio->wflush) {
@@ -582,8 +560,8 @@ ssize_t audio_in_write(struct file *file,
 						&nflags);
 			buf += mfield_size;
 			/* send the EOS and return */
-			pr_debug("%s:session id %d: send EOS 0x%8x\n",
-				__func__,
+			pr_debug("%s:session id %d: send EOS"
+				"0x%8x\n", __func__,
 				audio->ac->session, nflags);
 			break;
 		}
@@ -610,8 +588,8 @@ ssize_t audio_in_write(struct file *file,
 				buf += mfield_size;
 				count -= mfield_size;
 			} else {
-				pr_debug("%s:session id %d: continuous buffer\n",
-						__func__, audio->ac->session);
+				pr_debug("%s:session id %d: continuous"
+				"buffer\n", __func__, audio->ac->session);
 			}
 		}
 		xfer = (count > (audio->pcm_cfg.buffer_size)) ?
@@ -631,8 +609,8 @@ ssize_t audio_in_write(struct file *file,
 		buf += xfer;
 	}
 	mutex_unlock(&audio->write_lock);
-	pr_debug("%s:session id %d: eos_condition 0x%8x buf[0x%x] start[0x%x]\n",
-				__func__, audio->ac->session,
+	pr_debug("%s:session id %d: eos_condition 0x%8x buf[0x%x]"
+			"start[0x%x]\n", __func__, audio->ac->session,
 				nflags,	(int) buf, (int) start);
 	if (nflags & AUD_EOS_SET) {
 		rc = q6asm_cmd(audio->ac, CMD_EOS);
