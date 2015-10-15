@@ -2,7 +2,7 @@
  *
  * MSM MDP Interface (used by framebuffer core)
  *
- * Copyright (c) 2007-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2014, The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This software is licensed under the terms of the GNU General Public
@@ -557,6 +557,11 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 	c[1] = cmap->blue;
 	c[2] = cmap->red;
 
+	if (cmap->start > MDP_HIST_LUT_SIZE || cmap->len > MDP_HIST_LUT_SIZE ||
+			(cmap->start + cmap->len > MDP_HIST_LUT_SIZE)) {
+		pr_err("mdp_lut_hw_update invalid arguments\n");
+		return -EINVAL;
+	}
 	for (i = 0; i < cmap->len; i++) {
 		if (copy_from_user(&r, cmap->red++, sizeof(r)) ||
 		    copy_from_user(&g, cmap->green++, sizeof(g)) ||
@@ -2418,6 +2423,10 @@ void mdp4_hw_init(void)
 #endif
 
 static int mdp_bus_scale_restore_request(void);
+static struct msm_panel_common_pdata *mdp_pdata;
+
+static bool mdp_gamma_cooler_colors = false;
+module_param(mdp_gamma_cooler_colors, bool, 0664);
 
 static int mdp_on(struct platform_device *pdev)
 {
@@ -2483,6 +2492,11 @@ static int mdp_on(struct platform_device *pdev)
 	}
 
 	mdp_histogram_ctrl_all(TRUE);
+
+	if (mdp_pdata->mdp_gamma && !mdp_gamma_cooler_colors)
+		mdp_pdata->mdp_gamma();
+	else if (mdp_pdata->mdp_gamma_cool && mdp_gamma_cooler_colors)
+		mdp_pdata->mdp_gamma_cool();
 
 	if (ret == 0)
 		ret = panel_next_late_init(pdev);
@@ -2808,6 +2822,43 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 	}
 	return 0;
 }
+
+static int mdp_write_reg_mask(uint32_t reg, uint32_t val, uint32_t mask)
+{
+        uint32_t oldval, newval;
+
+        oldval = inpdw(MDP_BASE + reg);
+
+        oldval &= (~mask);
+        val &= mask;
+        newval = oldval | val;
+
+        outpdw(MDP_BASE + reg, newval);
+
+        return 0;
+
+}
+
+void mdp_color_enhancement(const struct mdp_table_entry *reg_seq, int size)
+{
+        int i;
+
+        printk(KERN_INFO "%s\n", __func__);
+
+        mdp_clk_ctrl(1);
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+        for (i = 0; i < size; i++) {
+                if (reg_seq[i].mask == 0x0)
+                        outpdw(MDP_BASE + reg_seq[i].reg, reg_seq[i].val);
+                else
+                        mdp_write_reg_mask(reg_seq[i].reg, reg_seq[i].val, reg_seq[i].mask);
+        }
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+        mdp_clk_ctrl(0);
+
+        return ;
+}
+
 
 static int mdp_probe(struct platform_device *pdev)
 {
@@ -3244,6 +3295,8 @@ static int mdp_probe(struct platform_device *pdev)
 			pdata->off = mdp4_overlay_writeback_off;
 			mfd->dma_fnc = mdp4_writeback_overlay;
 			mfd->dma = &dma_wb_data;
+			mutex_init(&mfd->writeback_mutex);
+			mutex_init(&mfd->unregister_mutex);
 			mdp4_display_intf_sel(EXTERNAL_INTF_SEL, DTV_INTF);
 		}
 		break;

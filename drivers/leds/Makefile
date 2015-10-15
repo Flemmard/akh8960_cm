@@ -55,6 +55,7 @@ obj-$(CONFIG_LEDS_ASIC3)		+= leds-asic3.o
 obj-$(CONFIG_LEDS_RENESAS_TPU)		+= leds-renesas-tpu.o
 obj-$(CONFIG_LEDS_MAX8997)		+= leds-max8997.o
 obj-$(CONFIG_LEDS_PMIC8058)		+= leds-pmic8058.o
+obj-$(CONFIG_LEDS_PM8058)		+= leds-pm8058.o
 obj-$(CONFIG_LEDS_PMIC_MPP)		+= leds-pmic-mpp.o
 obj-$(CONFIG_LEDS_QCIBL)		+= leds-qci-backlight.o
 obj-$(CONFIG_LEDS_MSM_PDM)		+= leds-msm-pdm.o
@@ -74,3 +75,4 @@ obj-$(CONFIG_LEDS_TRIGGER_SLEEP)	+= ledtrig-sleep.o
 
 # Flashlight Drivers
 obj-$(CONFIG_FLASHLIGHT_TPS61310)	+= tps61310_flashlight.o
+obj-$(CONFIG_FLASHLIGHT_AAT)		+= aat_flashlight.o

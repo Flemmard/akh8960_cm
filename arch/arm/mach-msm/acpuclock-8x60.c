@@ -172,10 +172,17 @@ static uint32_t bus_perf_client;
 /* L2 frequencies = 2 * 27 MHz * L_VAL */
 static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 	[0]  = { MAX_AXI, 0, 0,    1000000, 1100000, 0},
+#ifdef CONFIG_L2_FREQ_FIXUP
+	[1]  = { 432000,  1, 0x08, 1000000, 1100000, 1},
+	[2]  = { 486000,  1, 0x09, 1000000, 1100000, 1},
+	[3]  = { 540000,  1, 0x0A, 1000000, 1100000, 1},
+	[4]  = { 594000,  1, 0x0B, 1000000, 1100000, 1},
+#else
 	[1]  = { 432000,  1, 0x08, 1000000, 1100000, 0},
 	[2]  = { 486000,  1, 0x09, 1000000, 1100000, 0},
 	[3]  = { 540000,  1, 0x0A, 1000000, 1100000, 0},
 	[4]  = { 594000,  1, 0x0B, 1000000, 1100000, 0},
+#endif
 	[5]  = { 648000,  1, 0x0C, 1000000, 1100000, 1},
 	[6]  = { 702000,  1, 0x0D, 1100000, 1100000, 1},
 	[7]  = { 756000,  1, 0x0E, 1100000, 1100000, 1},
@@ -195,9 +202,9 @@ static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 
 #define L2(x) (&l2_freq_tbl_v2[(x)])
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
+/*
 static struct clkctl_acpu_speed acpu_freq_tbl_1188mhz[] = {
   { {1, 1},  192000,  ACPU_PLL_8, 3, 1, 0, 0,    L2(1),   812500, 0x03006000},
-  /* MAX_AXI row is used to source CPU cores and L2 from the AFAB clock. */
   { {0, 0},  MAX_AXI, ACPU_AFAB,  1, 0, 0, 0,    L2(0),   875000, 0x03006000},
   { {1, 1},  384000,  ACPU_PLL_8, 3, 0, 0, 0,    L2(1),   875000, 0x03006000},
   { {1, 1},  432000,  ACPU_SCPLL, 0, 0, 1, 0x08, L2(1),   887500, 0x03006000},
@@ -217,6 +224,7 @@ static struct clkctl_acpu_speed acpu_freq_tbl_1188mhz[] = {
   { {1, 1}, 1188000,  ACPU_SCPLL, 0, 0, 1, 0x16, L2(15), 1187500, 0x03006000},
   { {0, 0}, 0 },
 };
+*/
 
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
 static struct clkctl_acpu_speed acpu_freq_tbl_1512mhz_slow[] = {
@@ -1044,7 +1052,7 @@ static __init struct clkctl_acpu_speed *select_freq_plan(void)
 			break;
 		}
 	} else {
-		acpu_freq_tbl = acpu_freq_tbl_1188mhz;
+		acpu_freq_tbl = acpu_freq_tbl_1512mhz_nom;
 	}
 
 	for (f = acpu_freq_tbl; f->acpuclk_khz != 0; f++)

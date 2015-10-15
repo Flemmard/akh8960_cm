@@ -99,6 +99,7 @@ struct usb_hcd {
 	 */
 	unsigned long		flags;
 #define HCD_FLAG_HW_ACCESSIBLE		0	/* at full power */
+#define HCD_FLAG_SAW_IRQ		1
 #define HCD_FLAG_POLL_RH		2	/* poll for rh status? */
 #define HCD_FLAG_POLL_PENDING		3	/* status has changed? */
 #define HCD_FLAG_WAKEUP_PENDING		4	/* root hub is resuming? */
@@ -409,7 +410,7 @@ extern int usb_hcd_pci_probe(struct pci_dev *dev,
 extern void usb_hcd_pci_remove(struct pci_dev *dev);
 extern void usb_hcd_pci_shutdown(struct pci_dev *dev);
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 extern const struct dev_pm_ops usb_hcd_pci_pm_ops;
 #endif
 #endif /* CONFIG_PCI */

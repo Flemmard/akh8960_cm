@@ -928,6 +928,8 @@ source "arch/arm/mach-msm/lge/Kconfig"
 
 source "arch/arm/mach-msm/htc/Kconfig"
 
+source "arch/arm/mach-msm/hp/Kconfig"
+
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"
 	default y
@@ -953,7 +955,8 @@ config PHYS_OFFSET
 	default "0x00200000" if !MSM_STACKED_MEMORY
 	default "0x00000000" if ARCH_QSD8X50 && MSM_SOC_REV_A
 	default "0x20000000" if ARCH_QSD8X50
-	default "0x40200000" if ARCH_MSM8X60
+	default "0x48000000" if ARCH_MSM8X60 && MACH_HTC
+	default "0x40200000" if ARCH_MSM8X60 && !MACH_HTC
 	default "0x10000000"
 
 config KERNEL_MSM_CONTIG_MEM_REGION
@@ -1571,6 +1574,22 @@ config MSM_DALRPC_TEST
 	help
 	  Exercises DAL RPC calls to QDSP6.
 
+config MSM_MPDEC
+	bool "Enable kernel based mpdecision"
+	depends on MSM_SMP
+	default n
+	help
+	  This enables kernel based multi core control.
+	  (up/down hotplug based on load)
+
+config MSM_MPDEC_INPUTBOOST_CPUMIN
+	bool "Enable mpdecision input boost CPU minimum"
+	select MSM_CPU_FREQ_SET_MIN_MAX
+	depends on MSM_MPDEC
+	default n
+	help
+	  This pushes the cpu min speed to predefined values on input events.
+
 if CPU_FREQ_MSM
 
 config MSM_CPU_FREQ_SET_MIN_MAX
@@ -1583,12 +1602,12 @@ config MSM_CPU_FREQ_SET_MIN_MAX
 config MSM_CPU_FREQ_MAX
 	int "Max CPU Frequency"
 	depends on MSM_CPU_FREQ_SET_MIN_MAX
-	default 384000
+	default 1512000
 
 config MSM_CPU_FREQ_MIN
 	int "Min CPU Frequency"
 	depends on MSM_CPU_FREQ_SET_MIN_MAX
-	default 245760
+	default 192000
 
 endif # CPU_FREQ_MSM
 
@@ -1883,6 +1902,12 @@ config MSM_PIL_QDSP6V3
 	help
 	  Support for booting and shutting down QDSP6v3 processors (hexagon).
 	  The QDSP6 is a low power DSP used in audio software applications.
+
+config MSM_INSECURE_PIL_QDSP6V3
+	bool "Force QDSP6v3 PIL to insecure mode"
+	depends on MSM_PIL_QDSP6V3
+	help
+	  Force Riva PIL to use non-secure boot.
 
 config MSM_PIL_QDSP6V4
 	tristate "QDSP6v4 (Hexagon) Boot Support"
@@ -2609,4 +2634,25 @@ config MSM_USE_USER_ACCESSIBLE_TIMERS
 	  Enables MSM-specific user accessible timers via a shared
 	  memory page containing the cycle counter.
 
+config MSM_UARTDM
+	tristate "MSM UARTDM (High Speed) Driver"
+	depends on ARCH_MSM
+	default n
+	help
+	  Provides access to the high speed uart ports.
+
+config REMOVE_SMI_2X_CLK
+       bool "remove 2x_axi_clk for SMI"
+       default n
+
+config L2_FREQ_FIXUP
+       bool "Some msm8x60 doesn't like low freqs"
+       depends on ARCH_MSM8X60
+       default n
+
+config HAS_MACH_MEMUTILS
+	default n
+	bool "Motorola MSM memcpy enhancements"
+	help
+	Faster memcpy performance for Krait
 endif

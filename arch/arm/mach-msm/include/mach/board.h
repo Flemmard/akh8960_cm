@@ -30,6 +30,22 @@
 #include <mach/board-ext-htc.h>
 #endif
 
+enum msm_camera_csi_data_format {
+	CSI_8BIT,
+	CSI_10BIT,
+	CSI_12BIT,
+};
+
+struct msm_camera_csi_params {
+	enum msm_camera_csi_data_format data_format;
+	uint8_t lane_cnt;
+	uint8_t lane_assign;
+	uint8_t settle_cnt;
+	uint8_t dpcm_scheme;
+	uint8_t mipi_driving_strength;/*from 0-3*/
+	uint8_t hs_impedence;
+};
+
 struct msm_camera_io_ext {
 	uint32_t mdcphy;
 	uint32_t mdcsz;
@@ -244,7 +260,7 @@ struct msm_camera_sensor_platform_info {
 	struct msm_camera_gpio_conf *gpio_conf;
 	struct msm_camera_i2c_conf *i2c_conf;
 	struct msm_camera_csi_lane_params *csi_lane_params;
-#ifdef CONFIG_MACH_HTC
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_MSM_CAMERA)
 	int sensor_reset_enable;
 	int sensor_pwd;
 	int vcm_pwd;
@@ -255,6 +271,7 @@ struct msm_camera_sensor_platform_info {
 	void *privacy_light_info;
 	enum sensor_mount_angle sensor_mount_angle;
 	bool ews_enable;
+	bool board_control_reset_pin;
 #endif
 };
 
@@ -321,7 +338,7 @@ struct msm_camera_sensor_info {
 	struct msm_actuator_info *actuator_info;
 	int pmic_gpio_enable;
 	struct msm_eeprom_info *eeprom_info;
-#ifdef CONFIG_MACH_HTC
+#if defined(CONFIG_MACH_HTC) && defined(CONFIG_MSM_CAMERA)
 	struct msm_camera_csi_params csi_params;
 	uint16_t num_actuator_info_table;
 	struct msm_actuator_info **actuator_info_table;
@@ -348,6 +365,8 @@ struct msm_camera_sensor_info {
 	uint32_t kpi_sensor_end;
 	uint8_t (*preview_skip_frame)(void);
 	int sensor_cut;
+	int dual_camera;
+	struct clk* main_clk;
 #endif
 };
 
@@ -474,6 +493,8 @@ struct msm_panel_common_pdata {
 	u32 splash_screen_addr;
 	u32 splash_screen_size;
 	char mdp_iommu_split_domain;
+	int (*mdp_gamma)(void);
+	int (*mdp_gamma_cool)(void);
 };
 
 

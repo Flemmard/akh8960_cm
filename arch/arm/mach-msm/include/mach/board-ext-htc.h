@@ -27,6 +27,7 @@
 void msm_otg_set_vbus_state(int online);
 
 enum usb_connect_type {
+	CONNECT_TYPE_NOTIFY = -3,
 	CONNECT_TYPE_CLEAR = -2,
 	CONNECT_TYPE_UNKNOWN = -1,
 	CONNECT_TYPE_NONE = 0,
@@ -108,20 +109,6 @@ typedef struct {
 #endif
 
 #ifdef CONFIG_MSM_CAMERA
-enum msm_camera_csi_data_format {
-	CSI_8BIT,
-	CSI_10BIT,
-	CSI_12BIT,
-};
-
-struct msm_camera_csi_params {
-	enum msm_camera_csi_data_format data_format;
-	uint8_t lane_cnt;
-	uint8_t lane_assign;
-	uint8_t settle_cnt;
-	uint8_t dpcm_scheme;
-};
-
 struct camera_led_info {
 	uint16_t enable;
 	uint16_t low_limit_led_state;

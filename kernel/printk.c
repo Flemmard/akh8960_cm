@@ -57,6 +57,10 @@ void asmlinkage __attribute__((weak)) early_printk(const char *fmt, ...)
 
 #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
 
+#ifdef CONFIG_KERNEL_LOG
+#include <linux/klog.h>
+#endif
+
 /* printk's without a loglevel use this.. */
 #define DEFAULT_MESSAGE_LOGLEVEL CONFIG_DEFAULT_MESSAGE_LOGLEVEL
 
@@ -297,10 +301,11 @@ static inline void boot_delay_msec(void)
 /*
  * Return the number of unread characters in the log buffer.
  */
-static int log_buf_get_len(void)
+int log_buf_get_len(void)
 {
 	return logged_chars;
 }
+EXPORT_SYMBOL(log_buf_get_len);
 
 /*
  * Clears the ring-buffer
@@ -875,9 +880,9 @@ static int console_trylock_for_printk(unsigned int cpu)
 		}
 	}
 	printk_cpu = UINT_MAX;
+	raw_spin_unlock(&logbuf_lock);
 	if (wake)
 		up(&console_sem);
-	raw_spin_unlock(&logbuf_lock);
 	return retval;
 }
 static const char recursion_bug_msg [] =
@@ -948,6 +953,9 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	printed_len += vscnprintf(printk_buf + printed_len,
 				  sizeof(printk_buf) - printed_len, fmt, args);
 
+#ifdef CONFIG_KERNEL_LOG
+	klog_write(printk_buf, printed_len);
+#endif
 
 	p = printk_buf;
 #ifdef CONFIG_LGE_CRASH_HANDLER
@@ -1728,7 +1736,7 @@ late_initcall(printk_late_init);
 
 #if defined CONFIG_PRINTK
 
-int printk_sched(const char *fmt, ...)
+int printk_deferred(const char *fmt, ...)
 {
 	unsigned long flags;
 	va_list args;

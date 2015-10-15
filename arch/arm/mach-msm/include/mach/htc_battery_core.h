@@ -15,7 +15,6 @@
 #include <mach/board.h>
 #include <linux/notifier.h>
 #include <linux/power_supply.h>
-#include <linux/rtc.h>
 #include <mach/htc_battery_common.h>
 
 #define BATT_LOG(x...) do { \
@@ -64,6 +63,25 @@ enum htc_batt_rt_attr {
 	HTC_PJ_RT_VOLTAGE,
 };
 
+#ifdef CONFIG_HTC_BATT_8x60
+struct battery_info_reply {
+	u32 batt_vol;
+	u32 batt_id;
+	s32 batt_temp;
+	s32 batt_current;
+	u32 batt_discharg_current;
+	u32 level;
+	u32 level_raw;
+	u32 charging_source;
+	u32 charging_enabled;
+	u32 full_bat;
+	u32 full_level;
+	u32 over_vchg;
+	s32 temp_fault;
+	u32 batt_state;
+	u32 overload;
+};
+#else
 struct battery_info_reply {
 	u32 batt_vol;
 	u32 pj_vol;
@@ -88,6 +106,23 @@ struct battery_info_reply {
 	u32 batt_state;
 	u32 overload;
 };
+#endif
+
+struct battery_info_reply_compat {
+	u32 batt_vol;
+	u32 batt_id;
+	s32 batt_temp;
+	s32 batt_current;
+	u32 batt_discharg_current;
+	u32 level;
+	u32 charging_source;
+	u32 charging_enabled;
+	u32 full_bat;
+	u32 full_level;
+	u32 over_vchg;
+	s32 temp_fault;
+	u32 batt_state;
+};
 
 struct htc_battery_core {
 	int (*func_get_batt_rt_attr)(enum htc_batt_rt_attr attr, int* val);
@@ -105,6 +140,7 @@ struct htc_battery_core {
 #ifdef CONFIG_HTC_BATT_CORE
 extern int htc_battery_core_update_changed(void);
 extern int htc_battery_core_register(struct device *dev, struct htc_battery_core *htc_battery);
+int htc_get_batt_level(void);
 const struct battery_info_reply* htc_battery_core_get_batt_info_rep(void);
 #else
 static int htc_battery_core_update_changed(void) { return 0; }

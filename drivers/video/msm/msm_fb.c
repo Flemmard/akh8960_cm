@@ -4,7 +4,7 @@
  * Core MSM framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -116,6 +116,7 @@ extern unsigned long mdp_timer_duration;
 static int msm_fb_register(struct msm_fb_data_type *mfd);
 static int msm_fb_open(struct fb_info *info, int user);
 static int msm_fb_release(struct fb_info *info, int user);
+static int msm_fb_release_all(struct fb_info *info, boolean is_all);
 static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 			      struct fb_info *info);
 static int msm_fb_stop_sw_refresher(struct msm_fb_data_type *mfd);
@@ -438,6 +439,17 @@ static void sre_update(unsigned long data)
 
 static void bl_workqueue_handler(struct work_struct *work);
 
+static void msm_fb_shutdown(struct platform_device *pdev)
+{
+       struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+       if (IS_ERR_OR_NULL(mfd)) {
+               pr_err("MFD is Null");
+               return;
+       }
+       lock_fb_info(mfd->fbi);
+       msm_fb_release_all(mfd->fbi, true);
+       unlock_fb_info(mfd->fbi);
+}
 static int msm_fb_probe(struct platform_device *pdev)
 {
 #if defined(CONFIG_CABC_DIMMING_SWITCH) || defined(CONFIG_SRE_CONTROL)
@@ -456,7 +468,11 @@ static int msm_fb_probe(struct platform_device *pdev)
 				pdev->resource[0].end -
 				pdev->resource[0].start + 1;
 			fbram_phys = (char *)pdev->resource[0].start;
-			fbram = __va(fbram_phys);
+#ifdef CONFIG_MACH_TENDERLOIN
+                        fbram = ioremap((unsigned long)fbram_phys, fbram_size);
+#else
+                        fbram = __va(fbram_phys);
+#endif
 
 			if (!fbram) {
 				printk(KERN_ERR "fbram ioremap failed!\n");
@@ -905,7 +921,7 @@ static struct platform_driver msm_fb_driver = {
 	.suspend = msm_fb_suspend,
 	.resume = msm_fb_resume,
 #endif
-	.shutdown = NULL,
+	.shutdown = msm_fb_shutdown,
 	.driver = {
 		   /* Driver name must match the device name added in platform.c. */
 		   .name = "msm_fb",
@@ -1094,7 +1110,15 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	default:
 		if (mfd->panel_power_on) {
 			int curr_pwr_state;
-
+#ifdef CONFIG_CABC_DIMMING_SWITCH
+			if (pdata && pdata->dimming_on)
+				del_timer_sync(&mfd->dimming_update_timer);
+#endif
+#ifdef CONFIG_SRE_CONTROL
+			if (pdata && pdata->sre_ctrl) {
+				del_timer_sync(&mfd->sre_update_timer);
+			}
+#endif
 			mfd->op_enable = FALSE;
 			curr_pwr_state = mfd->panel_power_on;
 			down(&mfd->sem);
@@ -1883,6 +1907,8 @@ static int msm_fb_open(struct fb_info *info, int user)
 	}
 
 	if (info->node == 0 && !(mfd->cont_splash_done)) {	/* primary */
+			if(!mfd->ref_cnt)
+				mdp_set_dma_pan_info(info, NULL, TRUE);
 			mfd->ref_cnt++;
 			return 0;
 	}
@@ -1923,7 +1949,7 @@ static void msm_fb_free_base_pipe(struct msm_fb_data_type *mfd)
 	return 	mdp4_overlay_free_base_pipe(mfd);
 }
 
-static int msm_fb_release(struct fb_info *info, int user)
+static int msm_fb_release_all(struct fb_info *info, boolean is_all)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	int ret = 0, bl_level = 0;
@@ -1934,7 +1960,11 @@ static int msm_fb_release(struct fb_info *info, int user)
 		return -EINVAL;
 	}
 	msm_fb_pan_idle(mfd);
-	mfd->ref_cnt--;
+
+	do {
+	        mfd->ref_cnt--;
+		pm_runtime_put(info->dev);
+	} while (is_all && mfd->ref_cnt);
 
 	if (!mfd->ref_cnt) {
 		if (mfd->op_enable) {
@@ -1956,8 +1986,11 @@ static int msm_fb_release(struct fb_info *info, int user)
 		}
 	}
 
-	pm_runtime_put(info->dev);
 	return ret;
+}
+static int msm_fb_release(struct fb_info *info, int user)
+{
+        return msm_fb_release_all(info, false);
 }
 
 void msm_fb_wait_for_fence(struct msm_fb_data_type *mfd)

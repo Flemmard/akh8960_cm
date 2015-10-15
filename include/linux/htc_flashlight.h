@@ -55,6 +55,7 @@ enum flashlight_mode_flags {
 };
 
 #ifdef CONFIG_FLASHLIGHT_AAT
+#define AAT_FLT_DEV_NAME "FLASHLIGHT_AAT"
 struct flashlight_platform_data {
 	void (*gpio_init) (void);
 	uint32_t torch;
@@ -69,9 +70,12 @@ struct flashlight_platform_data {
 
 enum flashlight_chip{
 	AAT1271 = 0,
-	AAT3177,
 	AAT1277,
 };
+int aat1271_flashlight_control(int mode);
+int adp1650_flashlight_control(int mode);
+int aat3177_flashlight_control(int mode);
+int aat1277_flashlight_control(int mode);
 #endif
 
 #ifdef CONFIG_FLASHLIGHT_TPS61310
@@ -89,13 +93,9 @@ struct TPS61310_flashlight_platform_data {
 	uint32_t power_save_2;
 };
 
-int aat1271_flashlight_control(int mode);
-int adp1650_flashlight_control(int mode);
-int aat3177_flashlight_control(int mode);
-int aat1277_flashlight_control(int mode);
 int tps61310_flashlight_control(int mode);
-int htc_flashlight_control(int flashlight_mode);
 #endif
+int htc_flashlight_control(int flashlight_mode);
 
 #undef __HTC_FLASHLIGHT_H
 #endif

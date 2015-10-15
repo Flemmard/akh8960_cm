@@ -52,6 +52,7 @@
 #include <mach/rpm.h>
 #include <mach/board.h>
 #include <sound/apr_audio.h>
+#include <asm/mach/flash.h>
 #include "rpm_log.h"
 #include "rpm_stats.h"
 #include <mach/mpm.h>
@@ -94,11 +95,20 @@
 #define MSM_UART3DM_PHYS    (MSM_GSBI3_PHYS + 0x40000)
 #define INT_UART3DM_IRQ     GSBI3_UARTDM_IRQ
 #define TCSR_BASE_PHYS      0x16b00000
+#define MSM_GSBI10_UARTDM_PHYS	(MSM_GSBI10_PHYS + 0x40000)
+#define MSM_GSBI11_UARTDM_PHYS  (MSM_GSBI11_PHYS + 0x40000)
 
 /* PRNG device */
 #define MSM_PRNG_PHYS		0x16C00000
 #define MSM_UART9DM_PHYS    (MSM_GSBI9_PHYS + 0x40000)
 #define INT_UART9DM_IRQ     GSBI9_UARTDM_IRQ
+
+#ifdef CONFIG_MACH_HTC
+struct flash_platform_data msm_nand_data = {
+	.parts		= NULL,
+	.nr_parts	= 0,
+};
+#endif
 
 struct platform_device msm_gpio_device = {
 	.name = "msmgpio",
@@ -287,6 +297,67 @@ struct platform_device msm_device_uart_dm1 = {
 	},
 };
 
+#ifdef CONFIG_MACH_TENDERLOIN
+#undef DMOV_HSUART2_TX_CRCI
+#undef DMOV_HSUART2_RX_CRCI
+
+#define ADM3_0_B_GSBI10_OUT_CRCI	9
+#define ADM3_0_B_GSBI10_IN_CRCI		10
+
+#define DMOV_HSUART2_TX_CRCI   ((1 << 4) + ADM3_0_B_GSBI10_OUT_CRCI)
+#define DMOV_HSUART2_RX_CRCI   ((1 << 4) + ADM3_0_B_GSBI10_IN_CRCI)
+#endif
+
+static struct resource msm_uart_dm2_resources[] = {
+	{
+		.start = MSM_GSBI10_UARTDM_PHYS,
+		.end   = MSM_GSBI10_UARTDM_PHYS + PAGE_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = GSBI10_UARTDM_IRQ,
+		.end   = GSBI10_UARTDM_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = MSM_GSBI10_PHYS,
+		.end   = MSM_GSBI10_PHYS + 4 - 1,
+		.name  = "gsbi_resource",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = TCSR_BASE_PHYS,
+		.end   = TCSR_BASE_PHYS + 0x80 - 1,
+		.name  = "tcsr_resource",
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = DMOV_HSUART2_TX_CHAN,
+		.end   = DMOV_HSUART2_RX_CHAN,
+		.name  = "uartdm_channels",
+		.flags = IORESOURCE_DMA,
+	},
+	{
+		.start = DMOV_HSUART2_TX_CRCI,
+		.end   = DMOV_HSUART2_RX_CRCI,
+		.name  = "uartdm_crci",
+		.flags = IORESOURCE_DMA,
+	},
+};
+
+static u64 msm_uart_dm2_dma_mask = DMA_BIT_MASK(32);
+
+struct platform_device msm_device_uart_dm2 = {
+	.name = "msm_uartdm",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(msm_uart_dm2_resources),
+	.resource = msm_uart_dm2_resources,
+	.dev = {
+		.dma_mask = &msm_uart_dm2_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
+};
+
 static struct resource msm_uart3_dm_resources[] = {
 	{
 		.start = MSM_UART3DM_PHYS,
@@ -436,6 +507,27 @@ static struct resource gsbi4_qup_i2c_resources[] = {
 	},
 };
 
+static struct resource gsbi5_qup_i2c_resources[] = {
+	{
+		.name   = "qup_phys_addr",
+		.start  = MSM_GSBI5_QUP_PHYS,
+		.end    = MSM_GSBI5_QUP_PHYS + SZ_4K - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "gsbi_qup_i2c_addr",
+		.start  = MSM_GSBI5_PHYS,
+		.end    = MSM_GSBI5_PHYS + 4 - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name   = "qup_err_intr",
+		.start  = GSBI5_QUP_IRQ,
+		.end    = GSBI5_QUP_IRQ,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
 static struct resource gsbi7_qup_i2c_resources[] = {
 	{
 		.name	= "qup_phys_addr",
@@ -507,6 +599,27 @@ static struct resource gsbi9_qup_i2c_resources[] = {
 		.name	= "qup_err_intr",
 		.start	= GSBI9_QUP_IRQ,
 		.end	= GSBI9_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct resource gsbi10_qup_i2c_resources[] = {
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI10_QUP_PHYS,
+		.end	= MSM_GSBI10_QUP_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI10_PHYS,
+		.end	= MSM_GSBI10_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= GSBI10_QUP_IRQ,
+		.end	= GSBI10_QUP_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
 };
@@ -738,7 +851,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.init_level = 0,
 	.num_levels = 5,
 	.set_grp_async = NULL,
-	.idle_timeout = HZ/5,
+	.idle_timeout = HZ/12, // HZ/5 -> HZ/15, changed for low power consumption
 	.nap_allowed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -881,6 +994,12 @@ struct platform_device msm_gsbi4_qup_i2c_device = {
 	.resource	= gsbi4_qup_i2c_resources,
 };
 
+struct platform_device msm_gsbi5_qup_i2c_device = {
+	.name           = "qup_i2c",
+	.id             = MSM_GSBI5_QUP_I2C_BUS_ID,
+	.num_resources  = ARRAY_SIZE(gsbi5_qup_i2c_resources),
+	.resource       = gsbi5_qup_i2c_resources,
+};
 /* Use GSBI8 QUP for /dev/i2c-3 */
 struct platform_device msm_gsbi8_qup_i2c_device = {
 	.name		= "qup_i2c",
@@ -903,6 +1022,13 @@ struct platform_device msm_gsbi7_qup_i2c_device = {
 	.id		= MSM_GSBI7_QUP_I2C_BUS_ID,
 	.num_resources	= ARRAY_SIZE(gsbi7_qup_i2c_resources),
 	.resource	= gsbi7_qup_i2c_resources,
+};
+
+struct platform_device msm_gsbi10_qup_i2c_device = {
+	.name		= "qup_i2c",
+	.id		= MSM_GSBI10_QUP_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(gsbi10_qup_i2c_resources),
+	.resource	= gsbi10_qup_i2c_resources,
 };
 
 /* Use GSBI12 QUP for /dev/i2c-5 (Sensors) */
@@ -948,6 +1074,23 @@ struct platform_device msm_device_ssbi_pmic2 = {
 #endif
 
 #ifdef CONFIG_I2C_SSBI
+#define MSM_SSBI2_PMIC2B_PHYS	0x00C00000
+static struct resource msm_ssbi2_resources[] = {
+	{
+		.name   = "ssbi_base",
+		.start	= MSM_SSBI2_PMIC2B_PHYS,
+		.end	= MSM_SSBI2_PMIC2B_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device msm_device_ssbi2 = {
+	.name		= "i2c_ssbi",
+	.id		= MSM_SSBI2_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(msm_ssbi2_resources),
+	.resource	= msm_ssbi2_resources,
+};
+
 /* CODEC SSBI on /dev/i2c-8 */
 #define MSM_SSBI3_PHYS  0x18700000
 static struct resource msm_ssbi3_resources[] = {
@@ -1544,6 +1687,86 @@ static struct platform_device msm_mdp_device = {
 	.resource       = msm_mdp_resources,
 };
 #ifdef CONFIG_MSM_ROTATOR
+static struct msm_bus_vectors rotator_init_vectors[] = {
+	{
+		.src = MSM_BUS_MASTER_ROTATOR,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab = 0,
+		.ib = 0,
+	},
+};
+
+static struct msm_bus_vectors rotator_ui_vectors[] = {
+	{
+		.src = MSM_BUS_MASTER_ROTATOR,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab  = (1024 * 600 * 4 * 2 * 60),
+		.ib  = (1024 * 600 * 4 * 2 * 60 * 1.5),
+	},
+};
+
+static struct msm_bus_vectors rotator_vga_vectors[] = {
+	{
+		.src = MSM_BUS_MASTER_ROTATOR,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab  = (640 * 480 * 2 * 2 * 30),
+		.ib  = (640 * 480 * 2 * 2 * 30 * 1.5),
+	},
+};
+static struct msm_bus_vectors rotator_720p_vectors[] = {
+	{
+		.src = MSM_BUS_MASTER_ROTATOR,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab  = (1280 * 736 * 2 * 2 * 30),
+		.ib  = (1280 * 736 * 2 * 2 * 30 * 1.5),
+	},
+};
+
+static struct msm_bus_vectors rotator_1080p_vectors[] = {
+	{
+		.src = MSM_BUS_MASTER_ROTATOR,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab  = (1920 * 1088 * 2 * 2 * 30),
+		.ib  = (1920 * 1088 * 2 * 2 * 30 * 1.5),
+	},
+};
+
+static struct msm_bus_paths rotator_bus_scale_usecases[] = {
+	{
+		ARRAY_SIZE(rotator_init_vectors),
+		rotator_init_vectors,
+	},
+	{
+		ARRAY_SIZE(rotator_ui_vectors),
+		rotator_ui_vectors,
+	},
+	{
+		ARRAY_SIZE(rotator_vga_vectors),
+		rotator_vga_vectors,
+	},
+	{
+		ARRAY_SIZE(rotator_720p_vectors),
+		rotator_720p_vectors,
+	},
+	{
+		ARRAY_SIZE(rotator_1080p_vectors),
+		rotator_1080p_vectors,
+	},
+};
+
+struct msm_bus_scale_pdata rotator_bus_scale_pdata = {
+	rotator_bus_scale_usecases,
+	ARRAY_SIZE(rotator_bus_scale_usecases),
+	.name = "rotator",
+};
+
+void __init msm_rotator_update_bus_vectors(unsigned int xres,
+	unsigned int yres)
+{
+	rotator_ui_vectors[0].ab = xres * yres * 4 * 2 * 60;
+	rotator_ui_vectors[0].ib = xres * yres * 4 * 2 * 60 * 3 / 2;
+}
+
 static struct resource resources_msm_rotator[] = {
 	{
 		.start	= 0x04E00000,
@@ -1804,16 +2027,32 @@ struct platform_device msm_device_otg = {
 	.resource	= resources_otg,
 };
 
+static struct resource resources_hsusb[] = {
+	{
+		.start	= 0x12500000,
+		.end	= 0x12500000 + SZ_1K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= USB1_HS_IRQ,
+		.end	= USB1_HS_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+
 static u64 dma_mask = 0xffffffffULL;
 struct platform_device msm_device_gadget_peripheral = {
 	.name		= "msm_hsusb",
 	.id		= -1,
+	.num_resources	= ARRAY_SIZE(resources_hsusb),
+	.resource	= resources_hsusb,
 	.dev		= {
 		.dma_mask 		= &dma_mask,
 		.coherent_dma_mask	= 0xffffffffULL,
 	},
 };
-#ifdef CONFIG_USB_EHCI_MSM_72K
+
 static struct resource resources_hsusb_host[] = {
 	{
 		.start	= 0x12500000,
@@ -1838,6 +2077,7 @@ struct platform_device msm_device_hsusb_host = {
 	},
 };
 
+#ifdef CONFIG_USB_EHCI_MSM_72K
 static struct platform_device *msm_host_devices[] = {
 	&msm_device_hsusb_host,
 };
@@ -2332,6 +2572,7 @@ struct msm_vidc_platform_data vidc_platform_data = {
 #endif
 	.disable_dmx = 0,
 	.disable_fullhd = 0,
+	.disable_turbo = 1,
 	.cont_mode_dpb_count = 8,
 	.disable_turbo = 1,
 	.fw_addr = 0x38000000,

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012,2014 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,7 @@
 #include <mach/msm_iomap.h>
 #include <mach/msm_bus.h>
 #include <linux/ktime.h>
+#include <linux/cpufreq.h>
 
 #include "kgsl.h"
 #include "kgsl_pwrscale.h"
@@ -33,6 +34,10 @@
 #define GPU_SWFI_LATENCY	3
 #define UPDATE_BUSY_VAL		1000000
 #define UPDATE_BUSY		50
+
+#ifdef CONFIG_CPU_FREQ_GOV_BADASS_GPU_CONTROL
+extern bool gpu_busy_state;
+#endif
 
 struct clk_pair {
 	const char *name;
@@ -179,19 +184,18 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int ret, level;
+	int ret;
+	unsigned int level = 0;
 
 	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
 
-	ret = sscanf(buf, "%d", &level);
-	if (ret != 1)
-		return count;
+	ret = kgsl_sysfs_store(buf, &level);
 
-	if (level < 0)
-		return count;
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 
@@ -236,20 +240,17 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int ret, level, max_level;
+	int ret, max_level;
+	unsigned int level = 0;
 
 	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
 
-	ret = sscanf(buf, "%d", &level);
-	if (ret != 1)
-		return count;
-
-	/* If the use specifies a negative number, then don't change anything */
-	if (level < 0)
-		return count;
+	ret = kgsl_sysfs_store(buf, &level);
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 
@@ -294,20 +295,17 @@ static int kgsl_pwrctrl_min_pwrlevel_store(struct device *dev,
 					 const char *buf, size_t count)
 {	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int ret, level, min_level;
+	int ret, min_level;
+	unsigned int level = 0;
 
 	if (device == NULL)
 		return 0;
 
 	pwr = &device->pwrctrl;
 
-	ret = sscanf(buf, "%d", &level);
-	if (ret != 1)
-		return count;
-
-	/* Don't do anything on obviously incorrect values */
-	if (level < 0)
-		return count;
+	ret = kgsl_sysfs_store(buf, &level);
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 	if (level > pwr->num_pwrlevels - 2)
@@ -378,7 +376,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	unsigned long val;
+	unsigned int val = 0;
 	int ret, level;
 
 	if (device == NULL)
@@ -386,9 +384,9 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 
 	pwr = &device->pwrctrl;
 
-	ret = sscanf(buf, "%ld", &val);
-	if (ret != 1)
-		return count;
+	ret = kgsl_sysfs_store(buf, &val);
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -430,7 +428,7 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 {
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	unsigned long val;
+	unsigned int val = 0;
 	int ret, level;
 
 	if (device == NULL)
@@ -438,9 +436,9 @@ static int kgsl_pwrctrl_gpuclk_store(struct device *dev,
 
 	pwr = &device->pwrctrl;
 
-	ret = sscanf(buf, "%ld", &val);
-	if (ret != 1)
-		return count;
+	ret = kgsl_sysfs_store(buf, &val);
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 	level = _get_nearest_pwrlevel(pwr, val);
@@ -468,21 +466,18 @@ static int kgsl_pwrctrl_pwrnap_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
-	char temp[20];
-	unsigned long val;
+	unsigned int val = 0;
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
-	int rc;
+	int ret;
 
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
 
-	snprintf(temp, sizeof(temp), "%.*s",
-			 (int)min(count, sizeof(temp) - 1), buf);
-	rc = strict_strtoul(temp, 0, &val);
-	if (rc)
-		return rc;
+	ret = kgsl_sysfs_store(buf, &val);
+	if (ret)
+		return ret;
 
 	mutex_lock(&device->mutex);
 
@@ -511,23 +506,20 @@ static int kgsl_pwrctrl_idle_timer_store(struct device *dev,
 					struct device_attribute *attr,
 					const char *buf, size_t count)
 {
-	char temp[20];
-	unsigned long val;
+	unsigned int val = 0;
 	struct kgsl_device *device = kgsl_device_from_dev(dev);
 	struct kgsl_pwrctrl *pwr;
 	const long div = 1000/HZ;
 	static unsigned int org_interval_timeout = 1;
-	int rc;
+	int ret;
 
 	if (device == NULL)
 		return 0;
 	pwr = &device->pwrctrl;
 
-	snprintf(temp, sizeof(temp), "%.*s",
-			 (int)min(count, sizeof(temp) - 1), buf);
-	rc = strict_strtoul(temp, 0, &val);
-	if (rc)
-		return rc;
+	ret = kgsl_sysfs_store(buf, &val);
+	if (ret)
+		return ret;
 
 	if (org_interval_timeout == 1)
 		org_interval_timeout = pwr->interval_timeout;
@@ -719,6 +711,9 @@ static void kgsl_pwrctrl_busy_time(struct kgsl_device *device, bool on_time)
 		!test_bit(KGSL_PWRFLAGS_AXI_ON, &device->pwrctrl.power_flags)) {
 		update_statistics(device);
 	}
+#ifdef CONFIG_CPU_FREQ_GOV_BADASS_GPU_CONTROL
+	gpu_busy_state = on_time;
+#endif
 }
 
 void kgsl_pwrctrl_clk(struct kgsl_device *device, int state,
@@ -1287,7 +1282,7 @@ int kgsl_pwrctrl_wake(struct kgsl_device *device)
 		mod_timer(&device->idle_timer,
 				jiffies + device->pwrctrl.interval_timeout);
 		mod_timer(&device->hang_timer,
-			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_PART)));
+			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_HANG_DETECT)));
 		pm_qos_update_request(&device->pm_qos_req_dma,
 					GPU_SWFI_LATENCY);
 	case KGSL_STATE_ACTIVE:
